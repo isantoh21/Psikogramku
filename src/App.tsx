@@ -35,7 +35,7 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.istScores) {
+        if (parsed && typeof parsed === 'object') {
           setState({
             ...INITIAL_STATE,
             ...parsed,
@@ -51,7 +51,7 @@ export default function App() {
               ...INITIAL_STATE.personalityScores,
               ...(parsed.personalityScores || {})
             },
-            interests: parsed.interests || INITIAL_STATE.interests,
+            interests: Array.isArray(parsed.interests) ? parsed.interests : INITIAL_STATE.interests,
             learningStyle: typeof parsed.learningStyle === 'string' ? parsed.learningStyle : '',
           });
         }
@@ -64,7 +64,7 @@ export default function App() {
     if (savedSd) {
       try {
         const parsed = JSON.parse(savedSd);
-        if (parsed.kecerdasanUmum) {
+        if (parsed && typeof parsed === 'object') {
           setSdState({
             ...INITIAL_SD_STATE,
             ...parsed,
@@ -88,7 +88,7 @@ export default function App() {
               ...INITIAL_SD_STATE.kepribadian,
               ...(parsed.kepribadian || {})
             },
-            interests: parsed.interests || INITIAL_SD_STATE.interests,
+            interests: Array.isArray(parsed.interests) ? parsed.interests : INITIAL_SD_STATE.interests,
           });
         }
       } catch (e) {
@@ -100,7 +100,7 @@ export default function App() {
     if (savedStaff) {
       try {
         const parsed = JSON.parse(savedStaff);
-        if (parsed.intelektual) {
+        if (parsed && typeof parsed === 'object') {
           setStaffState({
             ...INITIAL_STAFF_STATE,
             ...parsed,
@@ -145,9 +145,9 @@ export default function App() {
   // Save to LocalStorage on change
   useEffect(() => {
     if (isLoaded) {
-      localStorage.setItem('psikogramState', JSON.stringify(state));
-      localStorage.setItem('psikogramSdState', JSON.stringify(sdState));
-      localStorage.setItem('psikogramStaffState', JSON.stringify(staffState));
+      if (state) localStorage.setItem('psikogramState', JSON.stringify(state));
+      if (sdState) localStorage.setItem('psikogramSdState', JSON.stringify(sdState));
+      if (staffState) localStorage.setItem('psikogramStaffState', JSON.stringify(staffState));
     }
   }, [state, sdState, staffState, isLoaded]);
 
@@ -156,13 +156,17 @@ export default function App() {
       setState(prev => ({ ...prev, [section]: value }));
       return;
     }
-    setState(prev => ({
-      ...prev,
-      [section]: {
-        ...(prev[section] as any),
-        [field]: value
-      }
-    }));
+    setState(prev => {
+      const baseState = prev || INITIAL_STATE;
+      const baseSection = (baseState[section] as Record<string, any>) || {};
+      return {
+        ...baseState,
+        [section]: {
+          ...baseSection,
+          [field]: value
+        }
+      };
+    });
   };
 
   const resetForm = () => {
@@ -192,7 +196,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Psikogram_${state.clientData.fullName || 'Klien'}.doc`;
+    link.download = `Psikogram_${state?.clientData?.fullName || 'Klien'}.doc`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

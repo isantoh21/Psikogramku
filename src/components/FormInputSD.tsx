@@ -5,11 +5,19 @@ import { RefreshCw, FileText, Bot, Loader2, Copy, Check, Sparkles, CheckCircle2 
 import { GoogleGenAI } from '@google/genai';
 
 interface FormInputSDProps {
-  state: SdAppState;
+  state?: SdAppState;
   setState: React.Dispatch<React.SetStateAction<SdAppState>>;
 }
 
 export function FormInputSD({ state, setState }: FormInputSDProps) {
+  const safeState = state || INITIAL_SD_STATE;
+  const clientData = safeState.clientData || INITIAL_SD_STATE.clientData;
+  const cfitScores = safeState.cfitScores || INITIAL_SD_STATE.cfitScores;
+  const kecerdasanUmum = safeState.kecerdasanUmum || INITIAL_SD_STATE.kecerdasanUmum;
+  const bakatKemampuan = safeState.bakatKemampuan || INITIAL_SD_STATE.bakatKemampuan;
+  const kepribadian = safeState.kepribadian || INITIAL_SD_STATE.kepribadian;
+  const interests = safeState.interests || INITIAL_SD_STATE.interests;
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [copied, setCopied] = useState(false);
@@ -18,27 +26,29 @@ export function FormInputSD({ state, setState }: FormInputSDProps) {
   const updateState = (section: keyof SdAppState, field: string, value: any) => {
     if (section === 'clientData' || section === 'kecerdasanUmum' || section === 'bakatKemampuan' || section === 'kepribadian' || section === 'cfitScores') {
       setState(prev => {
+        const prevBase = prev || INITIAL_SD_STATE;
+        const prevClient = prevBase.clientData || INITIAL_SD_STATE.clientData;
         const updatedSection = {
-          ...(prev[section] as Record<string, any>),
+          ...((prevBase[section] as Record<string, any>) || {}),
           [field]: value
         };
         const newState = {
-          ...prev,
+          ...prevBase,
           [section]: updatedSection
         };
 
         // Jika tanggalLahir atau tanggalTes diubah, dan ada skor CFIT, hitung ulang dengan norma usia baru
         if (section === 'clientData' && (field === 'tanggalLahir' || field === 'tanggalTes')) {
-          const dob = field === 'tanggalLahir' ? value : prev.clientData.tanggalLahir;
-          const testDate = field === 'tanggalTes' ? value : prev.clientData.tanggalTes;
+          const dob = field === 'tanggalLahir' ? value : prevClient.tanggalLahir;
+          const testDate = field === 'tanggalTes' ? value : prevClient.tanggalTes;
           const age = getAgeInYears(dob, testDate);
           
-          if (prev.cfitScores && (prev.cfitScores.sub1 !== '' || prev.cfitScores.sub2 !== '' || prev.cfitScores.sub3 !== '' || prev.cfitScores.sub4 !== '')) {
+          if (prevBase.cfitScores && (prevBase.cfitScores.sub1 !== '' || prevBase.cfitScores.sub2 !== '' || prevBase.cfitScores.sub3 !== '' || prevBase.cfitScores.sub4 !== '')) {
             const calcRaw = {
-              sub1: Number(prev.cfitScores.sub1) || 0,
-              sub2: Number(prev.cfitScores.sub2) || 0,
-              sub3: Number(prev.cfitScores.sub3) || 0,
-              sub4: Number(prev.cfitScores.sub4) || 0,
+              sub1: Number(prevBase.cfitScores.sub1) || 0,
+              sub2: Number(prevBase.cfitScores.sub2) || 0,
+              sub3: Number(prevBase.cfitScores.sub3) || 0,
+              sub4: Number(prevBase.cfitScores.sub4) || 0,
             };
             const calculated = calculatePsikogramCFIT(calcRaw, age);
             newState.kecerdasanUmum = {
@@ -55,7 +65,7 @@ export function FormInputSD({ state, setState }: FormInputSDProps) {
         return newState;
       });
     } else {
-      setState(prev => ({ ...prev, [section]: value }));
+      setState(prev => ({ ...(prev || INITIAL_SD_STATE), [section]: value }));
     }
   };
 
@@ -63,7 +73,9 @@ export function FormInputSD({ state, setState }: FormInputSDProps) {
     const numValue = value === '' ? '' : Number(value);
     
     setState(prev => {
-      const newCfitScores = { ...(prev.cfitScores || {}), [sub]: numValue };
+      const prevBase = prev || INITIAL_SD_STATE;
+      const prevClient = prevBase.clientData || INITIAL_SD_STATE.clientData;
+      const newCfitScores = { ...(prevBase.cfitScores || {}), [sub]: numValue };
       
       const calcRaw = {
         sub1: Number(newCfitScores.sub1) || 0,
@@ -72,32 +84,32 @@ export function FormInputSD({ state, setState }: FormInputSDProps) {
         sub4: Number(newCfitScores.sub4) || 0,
       };
       
-      const age = getAgeInYears(prev.clientData.tanggalLahir, prev.clientData.tanggalTes);
+      const age = getAgeInYears(prevClient.tanggalLahir, prevClient.tanggalTes);
       const calculated = calculatePsikogramCFIT(calcRaw, age);
       const hasAnyScore = newCfitScores.sub1 !== '' || newCfitScores.sub2 !== '' || newCfitScores.sub3 !== '' || newCfitScores.sub4 !== '';
 
       return {
-        ...prev,
+        ...prevBase,
         cfitScores: newCfitScores,
-        iqScore: (prev.iqScore === '' || prev.iqScore === undefined) && hasAnyScore ? calculated.estimatedIq : prev.iqScore,
+        iqScore: (prevBase.iqScore === '' || prevBase.iqScore === undefined) && hasAnyScore ? calculated.estimatedIq : prevBase.iqScore,
         kecerdasanUmum: {
-          ...prev.kecerdasanUmum,
+          ...prevBase.kecerdasanUmum,
           ...calculated.bagianA
         },
         bakatKemampuan: {
-          ...prev.bakatKemampuan,
+          ...prevBase.bakatKemampuan,
           ...calculated.bagianB
         }
       };
     });
   };
 
-  const currentAge = getAgeInYears(state.clientData.tanggalLahir, state.clientData.tanggalTes);
+  const currentAge = getAgeInYears(clientData.tanggalLahir, clientData.tanggalTes);
   const currentCalc = calculatePsikogramCFIT({
-    sub1: Number(state.cfitScores?.sub1) || 0,
-    sub2: Number(state.cfitScores?.sub2) || 0,
-    sub3: Number(state.cfitScores?.sub3) || 0,
-    sub4: Number(state.cfitScores?.sub4) || 0,
+    sub1: Number(cfitScores?.sub1) || 0,
+    sub2: Number(cfitScores?.sub2) || 0,
+    sub3: Number(cfitScores?.sub3) || 0,
+    sub4: Number(cfitScores?.sub4) || 0,
   }, currentAge);
 
   const handleClear = () => {
@@ -120,9 +132,9 @@ Tolong buatkan draf narasi analisis hasil psikogram berdasarkan data klien berik
 Instrumen Inteligensi: CFIT (Culture Fair Intelligence Test) Skala 2 terstandardisasi khusus untuk anak usia di bawah 15 tahun (siswa SD).
 
 --- DATA KLIEN ---
-Nama: ${state.clientData.nama || '[Kosong]'}
-Usia: ${calculateAge(state.clientData.tanggalLahir, state.clientData.tanggalTes) || '[Kosong]'}
-Jenis Kelamin: ${state.clientData.jenisKelamin || '[Kosong]'}
+Nama: ${clientData.nama || '[Kosong]'}
+Usia: ${calculateAge(clientData.tanggalLahir, clientData.tanggalTes) || '[Kosong]'}
+Jenis Kelamin: ${clientData.jenisKelamin || '[Kosong]'}
 IQ: ${state.iqScore || '[Kosong]'} (${getIqClassification(state.iqScore)})
 
 --- ASPEK KECERDASAN UMUM ---
@@ -232,7 +244,7 @@ ATURAN DAN FORMAT PENULISAN:
               <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
               <input
                 type="text"
-                value={state.clientData.nama}
+                value={clientData.nama}
                 onChange={(e) => updateState('clientData', 'nama', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                 placeholder="Nama peserta..."
@@ -242,18 +254,18 @@ ATURAN DAN FORMAT PENULISAN:
               <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Lahir</label>
               <input
                 type="date"
-                value={state.clientData.tanggalLahir}
+                value={clientData.tanggalLahir}
                 onChange={(e) => updateState('clientData', 'tanggalLahir', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
               />
               <div className="text-xs text-gray-500 mt-1 h-4">
-                {calculateAge(state.clientData.tanggalLahir, state.clientData.tanggalTes)}
+                {calculateAge(clientData.tanggalLahir, clientData.tanggalTes)}
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Jenis Kelamin</label>
               <select
-                value={state.clientData.jenisKelamin}
+                value={clientData.jenisKelamin}
                 onChange={(e) => updateState('clientData', 'jenisKelamin', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
               >
@@ -266,7 +278,7 @@ ATURAN DAN FORMAT PENULISAN:
               <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Tes</label>
               <input
                 type="date"
-                value={state.clientData.tanggalTes}
+                value={clientData.tanggalTes}
                 onChange={(e) => updateState('clientData', 'tanggalTes', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
               />

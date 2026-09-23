@@ -1,13 +1,19 @@
 import React from 'react';
-import { StaffAppState } from '../types';
+import { StaffAppState, INITIAL_STAFF_STATE } from '../types';
 import { formatDateId } from '../utils/scoring';
 import { Printer, FileText } from 'lucide-react';
 
 interface PreviewPsikogramStaffProps {
-  state: StaffAppState;
+  state?: StaffAppState;
 }
 
 export function PreviewPsikogramStaff({ state }: PreviewPsikogramStaffProps) {
+  const safeState = state || INITIAL_STAFF_STATE;
+  const clientData = safeState.clientData || INITIAL_STAFF_STATE.clientData;
+  const intelektual = safeState.intelektual || INITIAL_STAFF_STATE.intelektual;
+  const sikapKerja = safeState.sikapKerja || INITIAL_STAFF_STATE.sikapKerja;
+  const kepribadian = safeState.kepribadian || INITIAL_STAFF_STATE.kepribadian;
+
   const exportToDocx = () => {
     const element = document.getElementById('psikogram-preview-staff');
     if (!element) return;
@@ -29,7 +35,7 @@ export function PreviewPsikogramStaff({ state }: PreviewPsikogramStaffProps) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Psikogram_Staff_${state.clientData.nama.replace(/\s+/g, '_') || 'Klien'}.doc`;
+    link.download = `Psikogram_Staff_${(clientData.nama || 'Klien').replace(/\s+/g, '_')}.doc`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -107,37 +113,37 @@ export function PreviewPsikogramStaff({ state }: PreviewPsikogramStaffProps) {
                 <tr>
                   <td className="py-0.5 w-[15%]">Nama</td>
                   <td className="py-0.5 w-[2%]">:</td>
-                  <td className="py-0.5 w-[40%] font-semibold">{state.clientData.nama}</td>
+                  <td className="py-0.5 w-[40%] font-semibold">{clientData.nama}</td>
                   <td className="py-0.5 w-[15%]">Nomor</td>
                   <td className="py-0.5 w-[2%]">:</td>
-                  <td className="py-0.5 w-[26%]">{state.clientData.nomor}</td>
+                  <td className="py-0.5 w-[26%]">{clientData.nomor}</td>
                 </tr>
                 <tr>
                   <td className="py-0.5">Tempat/Tgl.Lahir</td>
                   <td className="py-0.5">:</td>
-                  <td className="py-0.5">{state.clientData.tempatTglLahir}</td>
+                  <td className="py-0.5">{clientData.tempatTglLahir}</td>
                   <td className="py-0.5">Jenis Kelamin</td>
                   <td className="py-0.5">:</td>
-                  <td className="py-0.5">{state.clientData.jenisKelamin}</td>
+                  <td className="py-0.5">{clientData.jenisKelamin}</td>
                 </tr>
                 <tr>
                   <td className="py-0.5">Pendidikan</td>
                   <td className="py-0.5">:</td>
-                  <td className="py-0.5">{state.clientData.pendidikan}</td>
+                  <td className="py-0.5">{clientData.pendidikan}</td>
                   <td className="py-0.5 align-top" rowSpan={2}>Tujuan pemeriksaan</td>
                   <td className="py-0.5 align-top" rowSpan={2}>:</td>
-                  <td className="py-0.5 align-top font-semibold" rowSpan={2}>{state.clientData.tujuanPemeriksaan}</td>
+                  <td className="py-0.5 align-top font-semibold" rowSpan={2}>{clientData.tujuanPemeriksaan}</td>
                 </tr>
                 <tr>
                   <td className="py-0.5 align-top">Alamat</td>
                   <td className="py-0.5 align-top">:</td>
-                  <td className="py-0.5">{state.clientData.alamat}</td>
+                  <td className="py-0.5">{clientData.alamat}</td>
                 </tr>
                 <tr>
                   <td colSpan={3}></td>
                   <td className="py-0.5">Tgl. Pemeriksaan</td>
                   <td className="py-0.5">:</td>
-                  <td className="py-0.5">{state.clientData.tanggalTes ? formatDateId(state.clientData.tanggalTes) : ''}</td>
+                  <td className="py-0.5">{clientData.tanggalTes ? formatDateId(clientData.tanggalTes) : ''}</td>
                 </tr>
               </tbody>
             </table>
@@ -318,7 +324,7 @@ export function PreviewPsikogramStaff({ state }: PreviewPsikogramStaffProps) {
 
           <div className="flex justify-end text-center mt-12 mr-10">
             <div>
-              <p className="mb-0 text-[12px]">Surabaya, {state.clientData.tanggalTes ? formatDateId(state.clientData.tanggalTes) : ''}</p>
+              <p className="mb-0 text-[12px]">Surabaya, {clientData.tanggalTes ? formatDateId(clientData.tanggalTes) : ''}</p>
               <p className="mb-20 text-[12px]">Pemeriksa,</p>
               <p className="font-bold border-b border-black text-[12px] inline-block px-2 relative">
                 <span className="absolute -top-16 left-1/2 transform -translate-x-1/2 opacity-20 pointer-events-none text-blue-500 text-6xl">❂</span>

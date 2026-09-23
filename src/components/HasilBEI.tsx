@@ -31,6 +31,8 @@ const INITIAL_STATE: BEIState = {
 
 export function HasilBEI() {
   const [state, setState] = useState<BEIState>(INITIAL_STATE);
+  const safeState = state || INITIAL_STATE;
+  const clientData = safeState.clientData || INITIAL_STATE.clientData;
   const [isUploading, setIsUploading] = useState(false);
   const [uploadFileName, setUploadFileName] = useState('');
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error' | ''; text: string }>({ type: '', text: '' });
@@ -38,23 +40,30 @@ export function HasilBEI() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUpdateStar = (aspek: keyof Omit<BEIState, 'clientData'>, field: keyof STAR, value: string) => {
-    setState(prev => ({
-      ...prev,
-      [aspek]: {
-        ...prev[aspek],
-        [field]: value
-      }
-    }));
+    setState(prev => {
+      const base = prev || INITIAL_STATE;
+      return {
+        ...base,
+        [aspek]: {
+          ...(base[aspek] || {}),
+          [field]: value
+        }
+      };
+    });
   };
 
   const handleUpdateClient = (field: keyof BEIState['clientData'], value: string) => {
-    setState(prev => ({
-      ...prev,
-      clientData: {
-        ...prev.clientData,
-        [field]: value
-      }
-    }));
+    setState(prev => {
+      const base = prev || INITIAL_STATE;
+      const baseClient = base.clientData || INITIAL_STATE.clientData;
+      return {
+        ...base,
+        clientData: {
+          ...baseClient,
+          [field]: value
+        }
+      };
+    });
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement> | any) => {
@@ -109,23 +118,28 @@ export function HasilBEI() {
         throw new Error(errText || `Gagal mengekstrak data dari file (Status ${response.status})`);
       }
 
-      setState(prev => ({
-        ...prev,
-        clientData: {
-          nama: data.clientData?.nama || prev.clientData.nama,
-          posisi: data.clientData?.posisi || prev.clientData.posisi,
-          pengalaman: data.clientData?.pengalaman || prev.clientData.pengalaman,
-        },
-        kematanganEmosi: { ...prev.kematanganEmosi, ...(data.kematanganEmosi || {}) },
-        kematanganSosial: { ...prev.kematanganSosial, ...(data.kematanganSosial || {}) },
-        rasaPercayaDiri: { ...prev.rasaPercayaDiri, ...(data.rasaPercayaDiri || {}) },
-        motivasiBerprestasi: { ...prev.motivasiBerprestasi, ...(data.motivasiBerprestasi || {}) },
-        sikapMandiri: { ...prev.sikapMandiri, ...(data.sikapMandiri || {}) },
-        inisiatif: { ...prev.inisiatif, ...(data.inisiatif || {}) },
-        kemampuanBekerjasama: { ...prev.kemampuanBekerjasama, ...(data.kemampuanBekerjasama || {}) },
-        keterampilanBerkomunikasi: { ...prev.keterampilanBerkomunikasi, ...(data.keterampilanBerkomunikasi || {}) },
-        loyalitas: { ...prev.loyalitas, ...(data.loyalitas || {}) },
-      }));
+      const extractedClient = data?.clientData || {};
+      setState(prev => {
+        const base = prev || INITIAL_STATE;
+        const baseClient = base.clientData || INITIAL_STATE.clientData;
+        return {
+          ...base,
+          clientData: {
+            nama: extractedClient.nama || baseClient.nama,
+            posisi: extractedClient.posisi || baseClient.posisi,
+            pengalaman: extractedClient.pengalaman || baseClient.pengalaman,
+          },
+          kematanganEmosi: { ...base.kematanganEmosi, ...(data?.kematanganEmosi || {}) },
+          kematanganSosial: { ...base.kematanganSosial, ...(data?.kematanganSosial || {}) },
+          rasaPercayaDiri: { ...base.rasaPercayaDiri, ...(data?.rasaPercayaDiri || {}) },
+          motivasiBerprestasi: { ...base.motivasiBerprestasi, ...(data?.motivasiBerprestasi || {}) },
+          sikapMandiri: { ...base.sikapMandiri, ...(data?.sikapMandiri || {}) },
+          inisiatif: { ...base.inisiatif, ...(data?.inisiatif || {}) },
+          kemampuanBekerjasama: { ...base.kemampuanBekerjasama, ...(data?.kemampuanBekerjasama || {}) },
+          keterampilanBerkomunikasi: { ...base.keterampilanBerkomunikasi, ...(data?.keterampilanBerkomunikasi || {}) },
+          loyalitas: { ...base.loyalitas, ...(data?.loyalitas || {}) },
+        };
+      });
 
       setStatusMessage({
         type: 'success',
@@ -145,16 +159,16 @@ export function HasilBEI() {
 
   const downloadMarkdown = () => {
     const md = `## **BEHAVIOR EVENT INTERVIEW (STAFF)**
-## **Nama : ${state.clientData.nama}**
+## **Nama : ${clientData.nama}**
 
-**Posisi/level : ${state.clientData.posisi}**
+**Posisi/level : ${clientData.posisi}**
 
 **Pertanyaan pembuka untuk kemudian di lakukan probing dengan BEI**
 
 1. Perkenalkan diri Anda
 2. Jelaskan pengalaman kerja Anda
 
-${state.clientData.pengalaman || '-'}
+${clientData.pengalaman || '-'}
 
 ========================================================================
 
@@ -162,10 +176,10 @@ ${state.clientData.pengalaman || '-'}
 
 **1. Kematangan Emosi**
 Situation :
-${state.kematanganEmosi.situation || '-'}
+${safeState.kematanganEmosi.situation || '-'}
 
 Task :
-${state.kematanganEmosi.task || '-'}
+${safeState.kematanganEmosi.task || '-'}
 
 Action :
 ${state.kematanganEmosi.action || '-'}
@@ -291,8 +305,8 @@ ${state.loyalitas.result || '-'}
     const link = document.createElement('a');
     link.href = url;
     
-    const namaPeserta = state.clientData.nama || 'Peserta';
-    const posisiPeserta = state.clientData.posisi ? `_${state.clientData.posisi}` : '';
+    const namaPeserta = clientData.nama || 'Peserta';
+    const posisiPeserta = clientData.posisi ? `_${clientData.posisi}` : '';
     link.download = `Hasil BEI_${namaPeserta}${posisiPeserta}_SUDAH INPUT.md`;
     
     document.body.appendChild(link);
@@ -440,7 +454,7 @@ ${state.loyalitas.result || '-'}
               <label className="block text-sm font-medium text-gray-700 mb-1">Nama</label>
               <input
                 type="text"
-                value={state.clientData.nama}
+                value={clientData.nama}
                 onChange={(e) => handleUpdateClient('nama', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
               />
@@ -449,7 +463,7 @@ ${state.loyalitas.result || '-'}
               <label className="block text-sm font-medium text-gray-700 mb-1">Posisi/level</label>
               <input
                 type="text"
-                value={state.clientData.posisi}
+                value={clientData.posisi}
                 onChange={(e) => handleUpdateClient('posisi', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
               />
@@ -458,7 +472,7 @@ ${state.loyalitas.result || '-'}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Pengalaman Kerja</label>
             <textarea
-              value={state.clientData.pengalaman}
+              value={clientData.pengalaman}
               onChange={(e) => handleUpdateClient('pengalaman', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none min-h-[100px]"
             />

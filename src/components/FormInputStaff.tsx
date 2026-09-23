@@ -13,11 +13,20 @@ import {
 import { RefreshCw, FileText, Copy, Check, Upload, Loader2, Calculator, Info, ChevronDown, ChevronUp, CheckCircle2, AlertCircle, X } from 'lucide-react';
 
 interface FormInputStaffProps {
-  state: StaffAppState;
+  state?: StaffAppState;
   setState: React.Dispatch<React.SetStateAction<StaffAppState>>;
 }
 
 export function FormInputStaff({ state, setState }: FormInputStaffProps) {
+  const safeState = state || INITIAL_STAFF_STATE;
+  const clientData = safeState.clientData || INITIAL_STAFF_STATE.clientData;
+  const intelektual = safeState.intelektual || INITIAL_STAFF_STATE.intelektual;
+  const sikapKerja = safeState.sikapKerja || INITIAL_STAFF_STATE.sikapKerja;
+  const kepribadian = safeState.kepribadian || INITIAL_STAFF_STATE.kepribadian;
+  const istSubscores = safeState.istSubscores || INITIAL_STAFF_STATE.istSubscores;
+  const aspekScores = safeState.aspekScores || INITIAL_STAFF_STATE.aspekScores;
+  const aspekKategori = safeState.aspekKategori || INITIAL_STAFF_STATE.aspekKategori;
+
   const [copied, setCopied] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [isUploadingIST, setIsUploadingIST] = useState(false);
@@ -87,9 +96,11 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
   };
 
   const readFileAsBase64 = async (file: File): Promise<{ base64: string; mimeType: string }> => {
-    if (file.size > 4.4 * 1024 * 1024 && !file.type.startsWith('image/')) {
+    // Vercel serverless function payload limit is 4.5MB. Base64 encoding adds ~33% overhead.
+    // Raw binary files like PDF must be <= 3.0MB to avoid 413 or FUNCTION_INVOCATION_FAILED.
+    if (file.size > 3.0 * 1024 * 1024 && !file.type.startsWith('image/')) {
       throw new Error(
-        `Ukuran file (${(file.size / (1024 * 1024)).toFixed(1)}MB) melebihi batas upload serverless Vercel (maksimal 4.5MB). Harap kompres dokumen PDF terlebih dahulu.`
+        `Ukuran file (${(file.size / (1024 * 1024)).toFixed(1)}MB) melebihi batas aman upload Vercel (maksimal 3MB untuk file PDF). Harap kompres file PDF terlebih dahulu (misalnya via ilovepdf.com).`
       );
     }
 
@@ -148,6 +159,11 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
         );
       }
       const errText = data?.error || rawText || '';
+      if (errText.includes('FUNCTION_INVOCATION_FAILED')) {
+        throw new Error(
+          'Vercel Serverless Function gagal dijalankan (FUNCTION_INVOCATION_FAILED). Pastikan kode perubahan terbaru sudah di-push ke GitHub dan file PDF berukuran di bawah 3MB.'
+        );
+      }
       if (errText.includes('GEMINI_API_KEY')) {
         throw new Error(
           'GEMINI_API_KEY belum dikonfigurasi di Vercel! Buka Vercel Dashboard > Project Settings > Environment Variables, lalu tambahkan GEMINI_API_KEY.'
@@ -161,15 +177,18 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
 
   const updateState = (section: keyof StaffAppState, field: string, value: any) => {
     if (section === 'clientData' || section === 'intelektual' || section === 'sikapKerja' || section === 'kepribadian' || section === 'istSubscores') {
-      setState(prev => ({
-        ...prev,
-        [section]: {
-          ...(prev[section] as Record<string, any>),
-          [field]: value
-        }
-      }));
+      setState(prev => {
+        const base = prev || INITIAL_STAFF_STATE;
+        return {
+          ...base,
+          [section]: {
+            ...((base[section] as Record<string, any>) || {}),
+            [field]: value
+          }
+        };
+      });
     } else {
-      setState(prev => ({ ...prev, [section]: value }));
+      setState(prev => ({ ...(prev || INITIAL_STAFF_STATE), [section]: value }));
     }
   };
 
@@ -240,10 +259,10 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
         })
       });
       
-      const data = await handleApiResponse(response);
+      const data = (await handleApiResponse(response)) || {};
       
       const {
-        clientData,
+        clientData: extractedClientData,
         iqScore,
         iqLabel,
         skorLangsung,
@@ -255,10 +274,13 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
       } = data;
 
       setState(prev => {
+        const base = prev || INITIAL_STAFF_STATE;
+        const baseClient = base.clientData || INITIAL_STAFF_STATE.clientData;
+
         // 1. Aspek Pemahaman Verbal, Analisa-Sintesa, Kemampuan Numerik (Skor Maksimal 20 & Kategori PDF)
         const verbalScore = (skorLangsung?.pemahamanVerbal !== null && skorLangsung?.pemahamanVerbal !== undefined && skorLangsung?.pemahamanVerbal !== '')
           ? Number(skorLangsung.pemahamanVerbal)
-          : (istSubscores?.WA && istSubscores?.GE ? Math.round((Number(istSubscores.WA) + Number(istSubscores.GE)) / 2) : (prev.aspekScores?.pemahamanVerbal ?? ''));
+          : (istSubscores?.WA && istSubscores?.GE ? Math.round((Number(istSubscores.WA) + Number(istSubscores.GE)) / 2) : (base.aspekScores?.pemahamanVerbal ?? ''));
 
         const se = Number(istSubscores?.SE) || 0;
         const wa = Number(istSubscores?.WA) || 0;
@@ -266,22 +288,22 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
         const wu = Number(istSubscores?.WU) || 0;
         const analisaScore = (skorLangsung?.analisaSintesa !== null && skorLangsung?.analisaSintesa !== undefined && skorLangsung?.analisaSintesa !== '')
           ? Number(skorLangsung.analisaSintesa)
-          : ((se || wa || fa || wu) ? Math.round((se + wa + fa + wu) / 4) : (prev.aspekScores?.analisaSintesa ?? ''));
+          : ((se || wa || fa || wu) ? Math.round((se + wa + fa + wu) / 4) : (base.aspekScores?.analisaSintesa ?? ''));
 
         const numerikScore = (skorLangsung?.kemampuanNumerik !== null && skorLangsung?.kemampuanNumerik !== undefined && skorLangsung?.kemampuanNumerik !== '')
           ? Number(skorLangsung.kemampuanNumerik)
-          : (istSubscores?.RA && istSubscores?.ZR ? Math.round((Number(istSubscores.RA) + Number(istSubscores.ZR)) / 2) : (prev.aspekScores?.kemampuanNumerik ?? ''));
+          : (istSubscores?.RA && istSubscores?.ZR ? Math.round((Number(istSubscores.RA) + Number(istSubscores.ZR)) / 2) : (base.aspekScores?.kemampuanNumerik ?? ''));
 
-        const verbalCat = (tarafLangsung?.pemahamanVerbal ?? prev.aspekKategori?.pemahamanVerbal ?? '').trim();
-        const analisaCat = (tarafLangsung?.analisaSintesa ?? tarafAnalisaSintesa ?? prev.aspekKategori?.analisaSintesa ?? '').trim();
-        const numerikCat = (tarafLangsung?.kemampuanNumerik ?? prev.aspekKategori?.kemampuanNumerik ?? '').trim();
+        const verbalCat = (tarafLangsung?.pemahamanVerbal ?? base.aspekKategori?.pemahamanVerbal ?? '').trim();
+        const analisaCat = (tarafLangsung?.analisaSintesa ?? tarafAnalisaSintesa ?? base.aspekKategori?.analisaSintesa ?? '').trim();
+        const numerikCat = (tarafLangsung?.kemampuanNumerik ?? base.aspekKategori?.kemampuanNumerik ?? '').trim();
 
         const finalVerbal = convertStaffAspectWithScore(verbalCat, verbalScore);
         const finalAnalisaSintesa = convertStaffAspectWithScore(analisaCat, analisaScore);
         const finalNumerik = convertStaffAspectWithScore(numerikCat, numerikScore);
 
         // 2. Berpikir Sistematis (ZR)
-        let finalBerpikirSistematis: ScaleLevel = prev.intelektual.berpikirSistematis;
+        let finalBerpikirSistematis: ScaleLevel = base.intelektual.berpikirSistematis;
         if (istSubscores?.ZR !== null && istSubscores?.ZR !== undefined && istSubscores?.ZR !== '') {
           finalBerpikirSistematis = calculateISTBerpikirSistematis(istSubscores.ZR);
         } else if (tarafBerpikirSistematis) {
@@ -289,7 +311,7 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
         }
 
         // 3. Pemahaman Konsep (AN + ZR) / 2
-        let finalPemahamanKonsep: ScaleLevel = prev.intelektual.pemahamanKonsep;
+        let finalPemahamanKonsep: ScaleLevel = base.intelektual.pemahamanKonsep;
         if (
           (istSubscores?.AN !== null && istSubscores?.AN !== undefined && istSubscores?.AN !== '') ||
           (istSubscores?.ZR !== null && istSubscores?.ZR !== undefined && istSubscores?.ZR !== '')
@@ -299,32 +321,32 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
           finalPemahamanKonsep = convertStaffAspectWithScore(tarafPemahamanKonsep, '');
         }
 
-        const parsedIq = iqScore ? Number(iqScore) : prev.iqScore;
+        const parsedIq = iqScore ? Number(iqScore) : base.iqScore;
 
         return {
-          ...prev,
+          ...base,
           clientData: {
-            ...prev.clientData,
-            nama: clientData?.nama || prev.clientData.nama,
-            tempatTglLahir: clientData?.tempatTglLahir || prev.clientData.tempatTglLahir,
-            jenisKelamin: clientData?.jenisKelamin || prev.clientData.jenisKelamin,
-            nomor: clientData?.nomor || prev.clientData.nomor,
-            tanggalTes: clientData?.tanggalTes || prev.clientData.tanggalTes,
-            pendidikan: clientData?.pendidikan || prev.clientData.pendidikan,
-            tujuanPemeriksaan: clientData?.tujuanPemeriksaan || prev.clientData.tujuanPemeriksaan,
+            ...baseClient,
+            nama: extractedClientData?.nama || baseClient.nama,
+            tempatTglLahir: extractedClientData?.tempatTglLahir || baseClient.tempatTglLahir,
+            jenisKelamin: extractedClientData?.jenisKelamin || baseClient.jenisKelamin,
+            nomor: extractedClientData?.nomor || baseClient.nomor,
+            tanggalTes: extractedClientData?.tanggalTes || baseClient.tanggalTes,
+            pendidikan: extractedClientData?.pendidikan || baseClient.pendidikan,
+            tujuanPemeriksaan: extractedClientData?.tujuanPemeriksaan || baseClient.tujuanPemeriksaan,
           },
           iqScore: parsedIq,
-          iqLabel: iqLabel || (parsedIq ? mapISTToLabel(Number(parsedIq)) : prev.iqLabel),
+          iqLabel: iqLabel || (parsedIq ? mapISTToLabel(Number(parsedIq)) : base.iqLabel),
           istSubscores: {
-            SE: istSubscores?.SE ?? prev.istSubscores?.SE ?? '',
-            WA: istSubscores?.WA ?? prev.istSubscores?.WA ?? '',
-            AN: istSubscores?.AN ?? prev.istSubscores?.AN ?? '',
-            GE: istSubscores?.GE ?? prev.istSubscores?.GE ?? '',
-            ME: istSubscores?.ME ?? prev.istSubscores?.ME ?? '',
-            RA: istSubscores?.RA ?? prev.istSubscores?.RA ?? '',
-            ZR: istSubscores?.ZR ?? prev.istSubscores?.ZR ?? '',
-            FA: istSubscores?.FA ?? prev.istSubscores?.FA ?? '',
-            WU: istSubscores?.WU ?? prev.istSubscores?.WU ?? '',
+            SE: istSubscores?.SE ?? base.istSubscores?.SE ?? '',
+            WA: istSubscores?.WA ?? base.istSubscores?.WA ?? '',
+            AN: istSubscores?.AN ?? base.istSubscores?.AN ?? '',
+            GE: istSubscores?.GE ?? base.istSubscores?.GE ?? '',
+            ME: istSubscores?.ME ?? base.istSubscores?.ME ?? '',
+            RA: istSubscores?.RA ?? base.istSubscores?.RA ?? '',
+            ZR: istSubscores?.ZR ?? base.istSubscores?.ZR ?? '',
+            FA: istSubscores?.FA ?? base.istSubscores?.FA ?? '',
+            WU: istSubscores?.WU ?? base.istSubscores?.WU ?? '',
           },
           aspekScores: {
             pemahamanVerbal: verbalScore,
@@ -337,8 +359,8 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
             kemampuanNumerik: numerikCat,
           },
           intelektual: {
-            ...prev.intelektual,
-            potensiKecerdasan: parsedIq ? mapIQToLevel(Number(parsedIq)) : prev.intelektual.potensiKecerdasan,
+            ...base.intelektual,
+            potensiKecerdasan: parsedIq ? mapIQToLevel(Number(parsedIq)) : base.intelektual.potensiKecerdasan,
             berpikirSistematis: finalBerpikirSistematis,
             pemahamanVerbal: finalVerbal,
             analisaSintesa: finalAnalisaSintesa,
@@ -390,27 +412,32 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
         })
       });
       
-      const data = await handleApiResponse(response);
-      const { clientData, sikapKerja } = data;
+      const data = (await handleApiResponse(response)) || {};
+      const { clientData: extractedClientData, sikapKerja } = data;
 
-      setState(prev => ({
-        ...prev,
-        clientData: {
-          ...prev.clientData,
-          nama: clientData?.nama || prev.clientData.nama,
-          tempatTglLahir: clientData?.tempatTglLahir || prev.clientData.tempatTglLahir,
-          pendidikan: clientData?.pendidikan || prev.clientData.pendidikan,
-          alamat: clientData?.alamat || prev.clientData.alamat,
-          tujuanPemeriksaan: clientData?.tujuanPemeriksaan || prev.clientData.tujuanPemeriksaan,
-        },
-        sikapKerja: {
-          ...prev.sikapKerja,
-          kecepatan: sikapKerja?.kecepatan || prev.sikapKerja.kecepatan,
-          ketelitian: sikapKerja?.ketelitian || prev.sikapKerja.ketelitian,
-          ketekunan: sikapKerja?.ketekunan || prev.sikapKerja.ketekunan,
-          dayaTahanStres: sikapKerja?.dayaTahanStres || prev.sikapKerja.dayaTahanStres,
-        }
-      }));
+      setState(prev => {
+        const base = prev || INITIAL_STAFF_STATE;
+        const baseClient = base.clientData || INITIAL_STAFF_STATE.clientData;
+        const baseSikapKerja = base.sikapKerja || INITIAL_STAFF_STATE.sikapKerja;
+        return {
+          ...base,
+          clientData: {
+            ...baseClient,
+            nama: extractedClientData?.nama || baseClient.nama,
+            tempatTglLahir: extractedClientData?.tempatTglLahir || baseClient.tempatTglLahir,
+            pendidikan: extractedClientData?.pendidikan || baseClient.pendidikan,
+            alamat: extractedClientData?.alamat || baseClient.alamat,
+            tujuanPemeriksaan: extractedClientData?.tujuanPemeriksaan || baseClient.tujuanPemeriksaan,
+          },
+          sikapKerja: {
+            ...baseSikapKerja,
+            kecepatan: sikapKerja?.kecepatan || baseSikapKerja.kecepatan,
+            ketelitian: sikapKerja?.ketelitian || baseSikapKerja.ketelitian,
+            ketekunan: sikapKerja?.ketekunan || baseSikapKerja.ketekunan,
+            dayaTahanStres: sikapKerja?.dayaTahanStres || baseSikapKerja.dayaTahanStres,
+          }
+        };
+      });
 
       setUploadStatus({
         type: 'success',
@@ -454,31 +481,36 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
         })
       });
       
-      const data = await handleApiResponse(response);
-      const { clientData, kepribadian } = data;
+      const data = (await handleApiResponse(response)) || {};
+      const { clientData: extractedClientData, kepribadian } = data;
 
-      setState(prev => ({
-        ...prev,
-        clientData: {
-          ...prev.clientData,
-          nama: clientData?.nama || prev.clientData.nama,
-          tempatTglLahir: clientData?.tempatTglLahir || prev.clientData.tempatTglLahir,
-          pendidikan: clientData?.pendidikan || prev.clientData.pendidikan,
-          tujuanPemeriksaan: clientData?.tujuanPemeriksaan || prev.clientData.tujuanPemeriksaan,
-        },
-        kepribadian: {
-          ...prev.kepribadian,
-          kematanganEmosi: kepribadian?.kematanganEmosi || prev.kepribadian.kematanganEmosi,
-          kemasakanSosial: kepribadian?.kemasakanSosial || prev.kepribadian.kemasakanSosial,
-          rasaPercayaDiri: kepribadian?.rasaPercayaDiri || prev.kepribadian.rasaPercayaDiri,
-          motivasiBerprestasi: kepribadian?.motivasiBerprestasi || prev.kepribadian.motivasiBerprestasi,
-          sikapMandiri: kepribadian?.sikapMandiri || prev.kepribadian.sikapMandiri,
-          inisiatif: kepribadian?.inisiatif || prev.kepribadian.inisiatif,
-          kemampuanBekerjasama: kepribadian?.kemampuanBekerjasama || prev.kepribadian.kemampuanBekerjasama,
-          keterampilanBerkomunikasi: kepribadian?.keterampilanBerkomunikasi || prev.kepribadian.keterampilanBerkomunikasi,
-          loyalitas: kepribadian?.loyalitas || prev.kepribadian.loyalitas,
-        }
-      }));
+      setState(prev => {
+        const base = prev || INITIAL_STAFF_STATE;
+        const baseClient = base.clientData || INITIAL_STAFF_STATE.clientData;
+        const baseKepribadian = base.kepribadian || INITIAL_STAFF_STATE.kepribadian;
+        return {
+          ...base,
+          clientData: {
+            ...baseClient,
+            nama: extractedClientData?.nama || baseClient.nama,
+            tempatTglLahir: extractedClientData?.tempatTglLahir || baseClient.tempatTglLahir,
+            pendidikan: extractedClientData?.pendidikan || baseClient.pendidikan,
+            tujuanPemeriksaan: extractedClientData?.tujuanPemeriksaan || baseClient.tujuanPemeriksaan,
+          },
+          kepribadian: {
+            ...baseKepribadian,
+            kematanganEmosi: kepribadian?.kematanganEmosi || baseKepribadian.kematanganEmosi,
+            kemasakanSosial: kepribadian?.kemasakanSosial || baseKepribadian.kemasakanSosial,
+            rasaPercayaDiri: kepribadian?.rasaPercayaDiri || baseKepribadian.rasaPercayaDiri,
+            motivasiBerprestasi: kepribadian?.motivasiBerprestasi || baseKepribadian.motivasiBerprestasi,
+            sikapMandiri: kepribadian?.sikapMandiri || baseKepribadian.sikapMandiri,
+            inisiatif: kepribadian?.inisiatif || baseKepribadian.inisiatif,
+            kemampuanBekerjasama: kepribadian?.kemampuanBekerjasama || baseKepribadian.kemampuanBekerjasama,
+            keterampilanBerkomunikasi: kepribadian?.keterampilanBerkomunikasi || baseKepribadian.keterampilanBerkomunikasi,
+            loyalitas: kepribadian?.loyalitas || baseKepribadian.loyalitas,
+          }
+        };
+      });
       
       setHasUploadedPapi(true);
       setUploadStatus({
@@ -524,31 +556,36 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
         })
       });
       
-      const data = await handleApiResponse(response);
-      const { clientData, kepribadian } = data;
+      const data = (await handleApiResponse(response)) || {};
+      const { clientData: extractedClientData, kepribadian } = data;
 
-      setState(prev => ({
-        ...prev,
-        clientData: {
-          ...prev.clientData,
-          nama: clientData?.nama || prev.clientData.nama,
-          tempatTglLahir: clientData?.tempatTglLahir || prev.clientData.tempatTglLahir,
-          pendidikan: clientData?.pendidikan || prev.clientData.pendidikan,
-          tujuanPemeriksaan: clientData?.tujuanPemeriksaan || prev.clientData.tujuanPemeriksaan,
-        },
-        kepribadian: {
-          ...prev.kepribadian,
-          kematanganEmosi: kepribadian?.kematanganEmosi || prev.kepribadian.kematanganEmosi,
-          kemasakanSosial: kepribadian?.kemasakanSosial || prev.kepribadian.kemasakanSosial,
-          rasaPercayaDiri: kepribadian?.rasaPercayaDiri || prev.kepribadian.rasaPercayaDiri,
-          motivasiBerprestasi: kepribadian?.motivasiBerprestasi || prev.kepribadian.motivasiBerprestasi,
-          sikapMandiri: kepribadian?.sikapMandiri || prev.kepribadian.sikapMandiri,
-          inisiatif: kepribadian?.inisiatif || prev.kepribadian.inisiatif,
-          kemampuanBekerjasama: kepribadian?.kemampuanBekerjasama || prev.kepribadian.kemampuanBekerjasama,
-          keterampilanBerkomunikasi: kepribadian?.keterampilanBerkomunikasi || prev.kepribadian.keterampilanBerkomunikasi,
-          loyalitas: kepribadian?.loyalitas || prev.kepribadian.loyalitas,
-        }
-      }));
+      setState(prev => {
+        const base = prev || INITIAL_STAFF_STATE;
+        const baseClient = base.clientData || INITIAL_STAFF_STATE.clientData;
+        const baseKepribadian = base.kepribadian || INITIAL_STAFF_STATE.kepribadian;
+        return {
+          ...base,
+          clientData: {
+            ...baseClient,
+            nama: extractedClientData?.nama || baseClient.nama,
+            tempatTglLahir: extractedClientData?.tempatTglLahir || baseClient.tempatTglLahir,
+            pendidikan: extractedClientData?.pendidikan || baseClient.pendidikan,
+            tujuanPemeriksaan: extractedClientData?.tujuanPemeriksaan || baseClient.tujuanPemeriksaan,
+          },
+          kepribadian: {
+            ...baseKepribadian,
+            kematanganEmosi: kepribadian?.kematanganEmosi || baseKepribadian.kematanganEmosi,
+            kemasakanSosial: kepribadian?.kemasakanSosial || baseKepribadian.kemasakanSosial,
+            rasaPercayaDiri: kepribadian?.rasaPercayaDiri || baseKepribadian.rasaPercayaDiri,
+            motivasiBerprestasi: kepribadian?.motivasiBerprestasi || baseKepribadian.motivasiBerprestasi,
+            sikapMandiri: kepribadian?.sikapMandiri || baseKepribadian.sikapMandiri,
+            inisiatif: kepribadian?.inisiatif || baseKepribadian.inisiatif,
+            kemampuanBekerjasama: kepribadian?.kemampuanBekerjasama || baseKepribadian.kemampuanBekerjasama,
+            keterampilanBerkomunikasi: kepribadian?.keterampilanBerkomunikasi || baseKepribadian.keterampilanBerkomunikasi,
+            loyalitas: kepribadian?.loyalitas || baseKepribadian.loyalitas,
+          }
+        };
+      });
 
       setUploadStatus({
         type: 'success',
@@ -585,34 +622,34 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
 
   const generatePrompt = () => {
     const data = `--- DATA KLIEN ---
-Nama: ${state.clientData.nama || '[Kosong]'}
-Tujuan Pemeriksaan: ${state.clientData.tujuanPemeriksaan || '[Kosong]'}
-IQ: ${state.iqScore || '[Kosong]'} (${state.iqLabel || '[Kosong]'})
+Nama: ${clientData.nama || '[Kosong]'}
+Tujuan Pemeriksaan: ${clientData.tujuanPemeriksaan || '[Kosong]'}
+IQ: ${safeState.iqScore || '[Kosong]'} (${safeState.iqLabel || '[Kosong]'})
 
 --- ASPEK INTELEKTUAL ---
-Potensi Kecerdasan: ${getStaffScaleLabel(state.intelektual.potensiKecerdasan)}
-Berpikir Sistematis: ${getStaffScaleLabel(state.intelektual.berpikirSistematis)}
-Pemahaman Verbal: ${getStaffScaleLabel(state.intelektual.pemahamanVerbal)}
-Analisa-Sintesa: ${getStaffScaleLabel(state.intelektual.analisaSintesa)}
-Pemahaman Konsep: ${getStaffScaleLabel(state.intelektual.pemahamanKonsep)}
-Kemampuan Numerik: ${getStaffScaleLabel(state.intelektual.kemampuanNumerik)}
+Potensi Kecerdasan: ${getStaffScaleLabel(intelektual.potensiKecerdasan)}
+Berpikir Sistematis: ${getStaffScaleLabel(intelektual.berpikirSistematis)}
+Pemahaman Verbal: ${getStaffScaleLabel(intelektual.pemahamanVerbal)}
+Analisa-Sintesa: ${getStaffScaleLabel(intelektual.analisaSintesa)}
+Pemahaman Konsep: ${getStaffScaleLabel(intelektual.pemahamanKonsep)}
+Kemampuan Numerik: ${getStaffScaleLabel(intelektual.kemampuanNumerik)}
 
 --- SIKAP KERJA ---
-Kecepatan: ${getStaffScaleLabel(state.sikapKerja.kecepatan)}
-Ketelitian: ${getStaffScaleLabel(state.sikapKerja.ketelitian)}
-Ketekunan atau Keuletan: ${getStaffScaleLabel(state.sikapKerja.ketekunan)}
-Daya Tahan terhadap Stres: ${getStaffScaleLabel(state.sikapKerja.dayaTahanStres)}
+Kecepatan: ${getStaffScaleLabel(sikapKerja.kecepatan)}
+Ketelitian: ${getStaffScaleLabel(sikapKerja.ketelitian)}
+Ketekunan atau Keuletan: ${getStaffScaleLabel(sikapKerja.ketekunan)}
+Daya Tahan terhadap Stres: ${getStaffScaleLabel(sikapKerja.dayaTahanStres)}
 
 --- KEPRIBADIAN ---
-Kematangan Emosi: ${getStaffScaleLabel(state.kepribadian.kematanganEmosi)}
-Kemasakan Sosial: ${getStaffScaleLabel(state.kepribadian.kemasakanSosial)}
-Rasa Percaya Diri: ${getStaffScaleLabel(state.kepribadian.rasaPercayaDiri)}
-Motivasi Berprestasi: ${getStaffScaleLabel(state.kepribadian.motivasiBerprestasi)}
-Sikap Mandiri: ${getStaffScaleLabel(state.kepribadian.sikapMandiri)}
-Inisiatif: ${getStaffScaleLabel(state.kepribadian.inisiatif)}
-Kemampuan Bekerjasama: ${getStaffScaleLabel(state.kepribadian.kemampuanBekerjasama)}
-Keterampilan Berkomunikasi: ${getStaffScaleLabel(state.kepribadian.keterampilanBerkomunikasi)}
-Loyalitas: ${getStaffScaleLabel(state.kepribadian.loyalitas)}`;
+Kematangan Emosi: ${getStaffScaleLabel(kepribadian.kematanganEmosi)}
+Kemasakan Sosial: ${getStaffScaleLabel(kepribadian.kemasakanSosial)}
+Rasa Percaya Diri: ${getStaffScaleLabel(kepribadian.rasaPercayaDiri)}
+Motivasi Berprestasi: ${getStaffScaleLabel(kepribadian.motivasiBerprestasi)}
+Sikap Mandiri: ${getStaffScaleLabel(kepribadian.sikapMandiri)}
+Inisiatif: ${getStaffScaleLabel(kepribadian.inisiatif)}
+Kemampuan Bekerjasama: ${getStaffScaleLabel(kepribadian.kemampuanBekerjasama)}
+Keterampilan Berkomunikasi: ${getStaffScaleLabel(kepribadian.keterampilanBerkomunikasi)}
+Loyalitas: ${getStaffScaleLabel(kepribadian.loyalitas)}`;
 
     return `Tolong buatkan narasi untuk "Dinamika Psikologis" berdasarkan data tes psikologi berikut:
 
@@ -784,7 +821,7 @@ Paragraf 5 (Kepribadian - Ketaatan & Kemandirian):
               <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
               <input
                 type="text"
-                value={state.clientData.nama}
+                value={clientData.nama}
                 onChange={(e) => updateState('clientData', 'nama', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
               />
@@ -793,7 +830,7 @@ Paragraf 5 (Kepribadian - Ketaatan & Kemandirian):
               <label className="block text-sm font-medium text-gray-700 mb-1">Tempat/Tgl Lahir</label>
               <input
                 type="text"
-                value={state.clientData.tempatTglLahir}
+                value={clientData.tempatTglLahir}
                 onChange={(e) => updateState('clientData', 'tempatTglLahir', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                 placeholder="Gresik, 3 November 1999"
@@ -803,7 +840,7 @@ Paragraf 5 (Kepribadian - Ketaatan & Kemandirian):
               <label className="block text-sm font-medium text-gray-700 mb-1">Pendidikan</label>
               <input
                 type="text"
-                value={state.clientData.pendidikan}
+                value={clientData.pendidikan}
                 onChange={(e) => updateState('clientData', 'pendidikan', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
               />
@@ -812,7 +849,7 @@ Paragraf 5 (Kepribadian - Ketaatan & Kemandirian):
               <label className="block text-sm font-medium text-gray-700 mb-1">Alamat</label>
               <input
                 type="text"
-                value={state.clientData.alamat}
+                value={clientData.alamat}
                 onChange={(e) => updateState('clientData', 'alamat', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
               />
@@ -821,7 +858,7 @@ Paragraf 5 (Kepribadian - Ketaatan & Kemandirian):
               <label className="block text-sm font-medium text-gray-700 mb-1">Nomor</label>
               <input
                 type="text"
-                value={state.clientData.nomor}
+                value={clientData.nomor}
                 onChange={(e) => updateState('clientData', 'nomor', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                 placeholder="PSI-DIAN-607-135"
@@ -830,7 +867,7 @@ Paragraf 5 (Kepribadian - Ketaatan & Kemandirian):
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Jenis Kelamin</label>
               <select
-                value={state.clientData.jenisKelamin}
+                value={clientData.jenisKelamin}
                 onChange={(e) => updateState('clientData', 'jenisKelamin', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
               >
@@ -843,7 +880,7 @@ Paragraf 5 (Kepribadian - Ketaatan & Kemandirian):
               <label className="block text-sm font-medium text-gray-700 mb-1">Tujuan Pemeriksaan</label>
               <input
                 type="text"
-                value={state.clientData.tujuanPemeriksaan}
+                value={clientData.tujuanPemeriksaan}
                 onChange={(e) => updateState('clientData', 'tujuanPemeriksaan', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                 placeholder="Seleksi Karyawan Posisi..."
@@ -853,7 +890,7 @@ Paragraf 5 (Kepribadian - Ketaatan & Kemandirian):
               <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Tes</label>
               <input
                 type="date"
-                value={state.clientData.tanggalTes}
+                value={clientData.tanggalTes}
                 onChange={(e) => updateState('clientData', 'tanggalTes', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
               />

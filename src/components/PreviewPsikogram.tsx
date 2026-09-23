@@ -1,13 +1,17 @@
 import React from 'react';
-import { AppState } from '../types';
+import { AppState, INITIAL_STATE } from '../types';
 import { getIqClassification, calculateAspectsFromIST, calculateAge, formatDateId, getAgeInYears, getAgeGroup, calculateIq, getScaleLabel } from '../utils/scoring';
 
 interface PreviewPsikogramProps {
-  state: AppState;
+  state?: AppState;
 }
 
 export const PreviewPsikogram: React.FC<PreviewPsikogramProps> = ({ state }) => {
-  const { clientData, istScores, personalityScores, recommendation } = state;
+  const safeState = state || INITIAL_STATE;
+  const clientData = safeState.clientData || INITIAL_STATE.clientData;
+  const istScores = safeState.istScores || INITIAL_STATE.istScores;
+  const personalityScores = safeState.personalityScores || INITIAL_STATE.personalityScores;
+  const recommendation = safeState.recommendation || '';
   
   const age = getAgeInYears(clientData.dob || clientData.ageDob || '', clientData.testDate);
   const ageGroup = getAgeGroup(age);

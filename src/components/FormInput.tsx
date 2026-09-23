@@ -1,16 +1,22 @@
 import React, { useState } from 'react';
-import { AppState, ScaleLevel } from '../types';
+import { AppState, ScaleLevel, INITIAL_STATE } from '../types';
 import { getSwFromRw, convertGeRw, calculateAge, getAgeInYears, getAgeGroup, calculateIq, calculateAspectsFromIST, getIqClassification, getScaleLabel, PREDEFINED_INTERESTS } from '../utils/scoring';
 import { Bot, Copy, Check } from 'lucide-react';
 
 interface FormInputProps {
-  state: AppState;
+  state?: AppState;
   updateState: (section: keyof AppState, field: string, value: any) => void;
   resetForm: () => void;
   exportToDocx: () => void;
 }
 
 export const FormInput: React.FC<FormInputProps> = ({ state, updateState, resetForm, exportToDocx }) => {
+  const safeState = state || INITIAL_STATE;
+  const clientData = safeState.clientData || INITIAL_STATE.clientData;
+  const istScores = safeState.istScores || INITIAL_STATE.istScores;
+  const personalityScores = safeState.personalityScores || INITIAL_STATE.personalityScores;
+  const interests = safeState.interests || INITIAL_STATE.interests;
+
   const [confirmReset, setConfirmReset] = useState(false);
 
   const handleResetClick = () => {
@@ -35,13 +41,13 @@ export const FormInput: React.FC<FormInputProps> = ({ state, updateState, resetF
     updateState('personalityScores', field, value);
   };
 
-  const age = getAgeInYears(state.clientData.dob || state.clientData.ageDob || '', state.clientData.testDate);
+  const age = getAgeInYears(clientData.dob || clientData.ageDob || '', clientData.testDate);
   const ageGroup = getAgeGroup(age);
 
   const istKeys = ['SE', 'WA', 'AN', 'GE', 'ME', 'RA', 'ZR', 'FA', 'WU'] as const;
   let totalRw = 0;
   istKeys.forEach(key => {
-    const val = state.istScores[key];
+    const val = istScores[key];
     if (val !== '') {
       totalRw += key === 'GE' ? (convertGeRw(val) || 0) : Number(val);
     }
@@ -53,18 +59,18 @@ export const FormInput: React.FC<FormInputProps> = ({ state, updateState, resetF
   const [copied, setCopied] = useState(false);
 
   const generatePrompt = () => {
-    const ageStr = calculateAge(state.clientData.dob || state.clientData.ageDob || '', state.clientData.testDate);
-    const aspects = calculateAspectsFromIST(state.istScores, ageGroup);
-    const calculatedIq = calculateIq(state.istScores, ageGroup);
-    const displayIq = calculatedIq !== '' ? calculatedIq : (state.istScores.iq !== '' ? state.istScores.iq : '');
+    const ageStr = calculateAge(clientData.dob || clientData.ageDob || '', clientData.testDate);
+    const aspects = calculateAspectsFromIST(istScores, ageGroup);
+    const calculatedIq = calculateIq(istScores, ageGroup);
+    const displayIq = calculatedIq !== '' ? calculatedIq : (istScores.iq !== '' ? istScores.iq : '');
     const iqClass = getIqClassification(displayIq);
 
     return `Bertindaklah sebagai asisten psikolog yang ahli. Saya membutuhkan bantuan Anda untuk menyusun draf laporan analisis dinamika psikologis sepanjang 5 paragraf untuk klien saya, berdasarkan data hasil Tes Minat Bakat Penjurusan berikut:
 
 --- DATA KLIEN ---
-Nama: ${state.clientData.fullName || '[Belum diisi]'}
+Nama: ${clientData.fullName || '[Belum diisi]'}
 Usia: ${ageStr || '[Belum diisi]'}
-Asal Sekolah: ${state.clientData.school || '[Belum diisi]'}
+Asal Sekolah: ${clientData.school || '[Belum diisi]'}
 
 --- HASIL TES KECERDASAN (IST) ---
 Skor IQ: ${displayIq || '[Belum diisi]'} (${iqClass})
@@ -148,7 +154,7 @@ ATURAN DAN FORMAT PENULISAN:
             <input
               type="text"
               name="fullName"
-              value={state.clientData.fullName}
+              value={clientData.fullName}
               onChange={handleClientChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
               placeholder="Masukkan nama lengkap"
@@ -159,7 +165,7 @@ ATURAN DAN FORMAT PENULISAN:
             <input
               type="text"
               name="school"
-              value={state.clientData.school}
+              value={clientData.school}
               onChange={handleClientChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
             />
@@ -169,7 +175,7 @@ ATURAN DAN FORMAT PENULISAN:
             <input
               type="date"
               name="dob"
-              value={state.clientData.dob || state.clientData.ageDob || ''}
+              value={clientData.dob || clientData.ageDob || ''}
               onChange={handleClientChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
             />
@@ -179,7 +185,7 @@ ATURAN DAN FORMAT PENULISAN:
             <input
               type="date"
               name="testDate"
-              value={state.clientData.testDate}
+              value={clientData.testDate}
               onChange={handleClientChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
             />
@@ -187,7 +193,7 @@ ATURAN DAN FORMAT PENULISAN:
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Usia Aktual</label>
             <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-600 font-medium">
-              {calculateAge(state.clientData.dob || state.clientData.ageDob || '', state.clientData.testDate) || 'Pilih Tanggal Lahir dan Tanggal Pemeriksaan terlebih dahulu...'}
+              {calculateAge(clientData.dob || clientData.ageDob || '', clientData.testDate) || 'Pilih Tanggal Lahir dan Tanggal Pemeriksaan terlebih dahulu...'}
             </div>
           </div>
           <div className="md:col-span-2">
@@ -195,7 +201,7 @@ ATURAN DAN FORMAT PENULISAN:
             <input
               type="text"
               name="reportNumber"
-              value={state.clientData.reportNumber}
+              value={clientData.reportNumber}
               onChange={handleClientChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
             />

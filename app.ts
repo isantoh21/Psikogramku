@@ -10,6 +10,14 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+export function getGeminiApiKey(): string | undefined {
+  return process.env.GEMINI_API_KEY || 
+         process.env.GOOGLE_API_KEY || 
+         process.env.VITE_GEMINI_API_KEY || 
+         process.env.API_KEY ||
+         process.env.GEMINI_KEY;
+}
+
 export function normalizeMimeType(mimeType?: string, filename?: string, base64Data?: string): string {
   if (mimeType && mimeType !== 'application/octet-stream' && mimeType.trim() !== '') {
     return mimeType;
@@ -73,10 +81,11 @@ const apiRouter = express.Router();
 
 // Health check endpoint (helpful to verify if API is up on Vercel)
 apiRouter.get("/health", (req, res) => {
+  const apiKey = getGeminiApiKey();
   res.json({
     status: "ok",
     environment: process.env.NODE_ENV || "development",
-    geminiConfigured: !!process.env.GEMINI_API_KEY,
+    geminiConfigured: !!apiKey,
     timestamp: new Date().toISOString()
   });
 });
@@ -84,8 +93,9 @@ apiRouter.get("/health", (req, res) => {
 // IST Test extraction
 apiRouter.post("/extract-ist", async (req, res) => {
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({ error: 'GEMINI_API_KEY belum dikonfigurasi di Environment Variables' });
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GEMINI_API_KEY belum dikonfigurasi di Environment Variables Vercel' });
     }
     const { data, filename } = req.body;
     const mimeType = normalizeMimeType(req.body.mimeType, filename, data);
@@ -94,7 +104,7 @@ apiRouter.post("/extract-ist", async (req, res) => {
       return res.status(400).json({ error: 'Data file tidak ditemukan' });
     }
     
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
     const prompt = `Ekstrak data hasil tes IST (Intelligenz Struktur Test) dan biodata dari dokumen laporan psikotes seleksi staf ini.
 Kembalikan HANYA format JSON valid persis seperti template di bawah ini (tanpa markdown \`\`\`json):
 {
@@ -161,8 +171,9 @@ CATATAN PENTING:
 // Kraepelin extraction
 apiRouter.post("/extract-kraepelin", async (req, res) => {
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({ error: 'GEMINI_API_KEY belum dikonfigurasi di Environment Variables' });
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GEMINI_API_KEY belum dikonfigurasi di Environment Variables Vercel' });
     }
     const { data, filename } = req.body;
     const mimeType = normalizeMimeType(req.body.mimeType, filename, data);
@@ -171,7 +182,7 @@ apiRouter.post("/extract-kraepelin", async (req, res) => {
       return res.status(400).json({ error: 'Data file tidak ditemukan' });
     }
     
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
     const prompt = `Ekstrak data hasil tes Kraepelin dan biodata dari dokumen ini. Kembalikan HANYA format JSON valid persis seperti ini (tanpa markdown \`\`\`json):
 {
   "clientData": {
@@ -231,8 +242,9 @@ Jika data biodata tidak ditemukan, set string menjadi "". Jika data sikap kerja 
 // PAPI Kostick extraction
 apiRouter.post("/extract-papikostik", async (req, res) => {
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({ error: 'GEMINI_API_KEY belum dikonfigurasi di Environment Variables' });
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GEMINI_API_KEY belum dikonfigurasi di Environment Variables Vercel' });
     }
     const { data, filename } = req.body;
     const mimeType = normalizeMimeType(req.body.mimeType, filename, data);
@@ -241,7 +253,7 @@ apiRouter.post("/extract-papikostik", async (req, res) => {
       return res.status(400).json({ error: 'Data file tidak ditemukan' });
     }
     
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
     const prompt = `Ekstrak data biodata dan hasil tes PAPI Kostick dari dokumen ini. Kamu harus memahami Guide Interpreter PAPI Kostick. Berdasarkan skor dari masing-masing faktor PAPI Kostick (N, G, A, L, P, I, T, V, X, S, B, O, R, D, C, Z, E, K, F, W) yang ada di dokumen, hitung dan petakan ke dalam 9 aspek kepribadian berikut dengan taraf (level) dari 1 sampai 7 (1=Kurang Sekali, 2=Kurang, 3=Rata-rata Bawah, 4=Rata-rata, 5=Rata-rata Atas, 6=Baik, 7=Baik Sekali) sesuai dengan panduan / standar interpretasi psikologi yang berlaku.
 
 Kembalikan HANYA format JSON valid persis seperti ini (tanpa markdown \`\`\`json):
@@ -293,8 +305,9 @@ Jika data tidak ditemukan, set string menjadi "" dan angka menjadi 0.`;
 // MBTI extraction
 apiRouter.post("/extract-mbti", async (req, res) => {
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({ error: 'GEMINI_API_KEY belum dikonfigurasi di Environment Variables' });
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GEMINI_API_KEY belum dikonfigurasi di Environment Variables Vercel' });
     }
     const { data, filename, currentKepribadian } = req.body;
     const mimeType = normalizeMimeType(req.body.mimeType, filename, data);
@@ -303,7 +316,7 @@ apiRouter.post("/extract-mbti", async (req, res) => {
       return res.status(400).json({ error: 'Data file tidak ditemukan' });
     }
     
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
     const prompt = `Ekstrak data biodata dan hasil tes MBTI dari dokumen ini. Kamu harus memahami Guide Interpreter MBTI dan profil/deskripsi tipe kepribadian (seperti ESTJ, INFP, dll.).
 Berikut adalah skor/taraf dari 9 aspek kepribadian berdasarkan tes (PAPI Kostick) sebelumnya:
 ${JSON.stringify(currentKepribadian || {}, null, 2)}
@@ -365,8 +378,9 @@ apiRouter.post('/extract-bei', upload.single('file'), async (req, res) => {
   const file = req.file;
 
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({ error: 'GEMINI_API_KEY belum dikonfigurasi di server' });
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GEMINI_API_KEY belum dikonfigurasi di Environment Variables Vercel' });
     }
 
     const ext = path.extname(file.originalname).toLowerCase();
@@ -453,7 +467,7 @@ apiRouter.post('/extract-bei', upload.single('file'), async (req, res) => {
       }
     }
 
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
     const prompt = `Anda adalah seorang psikolog dan asesor wawancara kerja profesional.
 Tugas Anda adalah mengekstrak data Behavior Event Interview (BEI) dari file / dokumen wawancara ini ke dalam format metode STAR (Situation, Task, Action, Result) untuk 9 aspek kompetensi:
 1. kematanganEmosi (Kematangan Emosi)
@@ -568,11 +582,12 @@ apiRouter.post('/markitdown', upload.array('files', 5), async (req, res) => {
   try {
     const markitdownModule = await import('markitdown-js');
     const Markitdown = markitdownModule.default || markitdownModule.MarkItDown || (markitdownModule as any).Markitdown;
+    const apiKey = getGeminiApiKey();
     const converter = new Markitdown({
       llmCall: async ({ messages, base64Image, file: mediaFile }: any) => {
-        if (!process.env.GEMINI_API_KEY) return null;
+        if (!apiKey) return null;
         try {
-          const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+          const ai = new GoogleGenAI({ apiKey });
           if (base64Image) {
             const prompt = messages?.map((m: any) => m.content).join('\n') || 'Describe this image in detail.';
             const response = await ai.models.generateContent({
@@ -613,10 +628,10 @@ apiRouter.post('/markitdown', upload.array('files', 5), async (req, res) => {
             const result = await converter.convert(file.path, { fileExtension: extension });
             markdownText = result?.textContent || '';
           } catch (convErr) {
-            if (process.env.GEMINI_API_KEY) {
+            if (apiKey) {
               const fileBuffer = fs.readFileSync(file.path);
               const base64Data = fileBuffer.toString('base64');
-              const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+              const ai = new GoogleGenAI({ apiKey });
               let targetMime = file.mimetype || 'application/pdf';
               if (extension === '.pdf') targetMime = 'application/pdf';
               
@@ -673,5 +688,13 @@ apiRouter.post('/markitdown', upload.array('files', 5), async (req, res) => {
 // Mount both under '/api' and '/' so rewrites work seamlessly on Vercel
 app.use('/api', apiRouter);
 app.use('/', apiRouter);
+
+// Global Error Handler for Serverless stability
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Unhandled Server Error:', err);
+  if (!res.headersSent) {
+    res.status(500).json({ error: err?.message || 'Terjadi kesalahan internal pada server' });
+  }
+});
 
 export default app;

@@ -1,13 +1,21 @@
 import React from 'react';
-import { SdAppState } from '../types';
+import { SdAppState, INITIAL_SD_STATE } from '../types';
 import { getIqClassification, getScaleLabel, formatDateId, calculateAge } from '../utils/scoring';
 import { Printer, FileText } from 'lucide-react';
 
 interface PreviewPsikogramSDProps {
-  state: SdAppState;
+  state?: SdAppState;
 }
 
 export function PreviewPsikogramSD({ state }: PreviewPsikogramSDProps) {
+  const safeState = state || INITIAL_SD_STATE;
+  const clientData = safeState.clientData || INITIAL_SD_STATE.clientData;
+  const cfitScores = safeState.cfitScores || INITIAL_SD_STATE.cfitScores;
+  const kecerdasanUmum = safeState.kecerdasanUmum || INITIAL_SD_STATE.kecerdasanUmum;
+  const bakatKemampuan = safeState.bakatKemampuan || INITIAL_SD_STATE.bakatKemampuan;
+  const kepribadian = safeState.kepribadian || INITIAL_SD_STATE.kepribadian;
+  const interests = safeState.interests || INITIAL_SD_STATE.interests;
+
   const exportToDocx = () => {
     const element = document.getElementById('psikogram-preview-sd');
     if (!element) return;
@@ -29,7 +37,7 @@ export function PreviewPsikogramSD({ state }: PreviewPsikogramSDProps) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Psikogram_SD_${state.clientData.nama.replace(/\s+/g, '_') || 'Klien'}.doc`;
+    link.download = `Psikogram_SD_${(clientData.nama || 'Klien').replace(/\s+/g, '_')}.doc`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -107,17 +115,17 @@ export function PreviewPsikogramSD({ state }: PreviewPsikogramSDProps) {
                 <tr>
                   <td className="py-1 w-40">Nama</td>
                   <td className="py-1 w-4">:</td>
-                  <td className="py-1 font-semibold">{state.clientData.nama}</td>
+                  <td className="py-1 font-semibold">{clientData.nama}</td>
                 </tr>
                 <tr>
                   <td className="py-1">Usia</td>
                   <td className="py-1">:</td>
-                  <td className="py-1">{calculateAge(state.clientData.tanggalLahir, state.clientData.tanggalTes)}</td>
+                  <td className="py-1">{calculateAge(clientData.tanggalLahir, clientData.tanggalTes)}</td>
                 </tr>
                 <tr>
                   <td className="py-1">Jenis Kelamin</td>
                   <td className="py-1">:</td>
-                  <td className="py-1">{state.clientData.jenisKelamin}</td>
+                  <td className="py-1">{clientData.jenisKelamin}</td>
                 </tr>
                 <tr>
                   <td className="py-1">Jenis Layanan</td>
@@ -127,7 +135,7 @@ export function PreviewPsikogramSD({ state }: PreviewPsikogramSDProps) {
                 <tr>
                   <td className="py-1">Tanggal Tes</td>
                   <td className="py-1">:</td>
-                  <td className="py-1">{state.clientData.tanggalTes ? formatDateId(state.clientData.tanggalTes) : ''}</td>
+                  <td className="py-1">{clientData.tanggalTes ? formatDateId(clientData.tanggalTes) : ''}</td>
                 </tr>
               </tbody>
             </table>
