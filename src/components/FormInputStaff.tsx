@@ -44,14 +44,64 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
   const papiFileInputRef = useRef<HTMLInputElement>(null);
   const mbtiFileInputRef = useRef<HTMLInputElement>(null);
 
-  const readFileAsBase64 = (file: File): Promise<{ base64: string; mimeType: string }> => {
+  const compressImageIfNeeded = async (file: File): Promise<Blob> => {
+    if (!file.type.startsWith('image/')) return file;
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const maxDim = 2048; // Crisp resolution for text/table OCR
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(file);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            resolve(blob || file);
+          },
+          'image/jpeg',
+          0.85
+        );
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(file);
+      };
+      img.src = url;
+    });
+  };
+
+  const readFileAsBase64 = async (file: File): Promise<{ base64: string; mimeType: string }> => {
+    if (file.size > 4.4 * 1024 * 1024 && !file.type.startsWith('image/')) {
+      throw new Error(
+        `Ukuran file (${(file.size / (1024 * 1024)).toFixed(1)}MB) melebihi batas upload serverless Vercel (maksimal 4.5MB). Harap kompres dokumen PDF terlebih dahulu.`
+      );
+    }
+
+    const processedBlob = file.type.startsWith('image/') ? await compressImageIfNeeded(file) : file;
+
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => {
         try {
           const result = reader.result as string;
           const base64 = result.split(',')[1] || '';
-          let mimeType = file.type;
+          let mimeType = processedBlob.type || file.type;
           if (!mimeType || mimeType === 'application/octet-stream') {
             const name = file.name.toLowerCase();
             if (name.endsWith('.pdf')) mimeType = 'application/pdf';
@@ -67,8 +117,46 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
         }
       };
       reader.onerror = (error) => reject(error);
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(processedBlob);
     });
+  };
+
+  const handleApiResponse = async (response: Response) => {
+    const contentType = response.headers.get('content-type');
+    let data: any = null;
+    let rawText = '';
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      rawText = await response.text();
+    }
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error(
+          'API Server tidak ditemukan di Vercel (Status 404). Pastikan file vercel.json dan folder api/ sudah terdeploy ke repositori GitHub.'
+        );
+      }
+      if (response.status === 413) {
+        throw new Error(
+          'Ukuran file melebihi batas serverless Vercel (Maksimal 4.5MB). Harap kompres file PDF atau gambar sebelum diunggah.'
+        );
+      }
+      if (response.status === 504) {
+        throw new Error(
+          'Server Vercel Timeout (Status 504). Proses ekstraksi AI melebihi batas waktu serverless.'
+        );
+      }
+      const errText = data?.error || rawText || '';
+      if (errText.includes('GEMINI_API_KEY')) {
+        throw new Error(
+          'GEMINI_API_KEY belum dikonfigurasi di Vercel! Buka Vercel Dashboard > Project Settings > Environment Variables, lalu tambahkan GEMINI_API_KEY.'
+        );
+      }
+      throw new Error(errText || `Gagal memproses file (Status ${response.status})`);
+    }
+
+    return data;
   };
 
   const updateState = (section: keyof StaffAppState, field: string, value: any) => {
@@ -152,18 +240,7 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
         })
       });
       
-      let data: any;
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        const rawText = await response.text();
-        throw new Error(rawText || `Gagal mengunggah file (Status ${response.status})`);
-      }
-
-      if (!response.ok) {
-        throw new Error(data?.error || 'Gagal mengekstrak data dari server');
-      }
+      const data = await handleApiResponse(response);
       
       const {
         clientData,
@@ -313,19 +390,7 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
         })
       });
       
-      let data: any;
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        const rawText = await response.text();
-        throw new Error(rawText || `Gagal mengunggah file (Status ${response.status})`);
-      }
-
-      if (!response.ok) {
-        throw new Error(data?.error || 'Gagal mengekstrak data dari server');
-      }
-      
+      const data = await handleApiResponse(response);
       const { clientData, sikapKerja } = data;
 
       setState(prev => ({
@@ -389,19 +454,7 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
         })
       });
       
-      let data: any;
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        const rawText = await response.text();
-        throw new Error(rawText || `Gagal mengunggah file (Status ${response.status})`);
-      }
-
-      if (!response.ok) {
-        throw new Error(data?.error || 'Gagal mengekstrak data dari server');
-      }
-      
+      const data = await handleApiResponse(response);
       const { clientData, kepribadian } = data;
 
       setState(prev => ({
@@ -471,19 +524,7 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
         })
       });
       
-      let data: any;
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        const rawText = await response.text();
-        throw new Error(rawText || `Gagal mengunggah file (Status ${response.status})`);
-      }
-
-      if (!response.ok) {
-        throw new Error(data?.error || 'Gagal mengekstrak data dari server');
-      }
-      
+      const data = await handleApiResponse(response);
       const { clientData, kepribadian } = data;
 
       setState(prev => ({

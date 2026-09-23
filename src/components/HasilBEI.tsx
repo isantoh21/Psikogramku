@@ -65,6 +65,15 @@ export function HasilBEI() {
     setUploadFileName(file.name);
     setStatusMessage({ type: '', text: '' });
 
+    if (file.size > 4.4 * 1024 * 1024) {
+      setIsUploading(false);
+      setStatusMessage({
+        type: 'error',
+        text: `Ukuran file (${(file.size / (1024 * 1024)).toFixed(1)}MB) melebihi batas upload Vercel (maksimal 4.5MB). Harap kompres dokumen atau audio terlebih dahulu.`
+      });
+      return;
+    }
+
     const formData = new FormData();
     formData.append('file', file);
 
@@ -75,16 +84,29 @@ export function HasilBEI() {
       });
 
       let data: any;
+      let rawText = '';
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
         data = await response.json();
       } else {
-        const rawText = await response.text();
-        throw new Error(rawText || `Gagal mengunggah file (Status ${response.status})`);
+        rawText = await response.text();
       }
 
       if (!response.ok) {
-        throw new Error(data?.error || 'Gagal mengekstrak data dari file.');
+        if (response.status === 404) {
+          throw new Error('API Server tidak ditemukan di Vercel (Status 404). Pastikan file vercel.json dan folder api/ sudah terdeploy ke repositori GitHub.');
+        }
+        if (response.status === 413) {
+          throw new Error('Ukuran file melebihi batas serverless Vercel (Maksimal 4.5MB). Harap kompres file sebelum diunggah.');
+        }
+        if (response.status === 504) {
+          throw new Error('Server Vercel Timeout (Status 504). Proses ekstraksi AI melebihi batas waktu serverless.');
+        }
+        const errText = data?.error || rawText || '';
+        if (errText.includes('GEMINI_API_KEY')) {
+          throw new Error('GEMINI_API_KEY belum dikonfigurasi di Vercel! Buka Vercel Dashboard > Project Settings > Environment Variables, lalu tambahkan GEMINI_API_KEY.');
+        }
+        throw new Error(errText || `Gagal mengekstrak data dari file (Status ${response.status})`);
       }
 
       setState(prev => ({
