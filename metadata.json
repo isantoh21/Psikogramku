@@ -1,0 +1,6 @@
+{
+  "name": "Psikogram Tes Minat Bakat",
+  "description": "Aplikasi web untuk mempermudah pembuatan Psikogram Tes Minat Bakat Penjurusan di An-Nur Psycho Center.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
