@@ -104,64 +104,62 @@ export async function callUnifiedAI({
   if (provider === 'gemini') {
     const apiKey = keyHeader || getGeminiApiKey();
     if (!apiKey) {
-      throw new Error('GEMINI_API_KEY belum dikonfigurasi. Silakan masukkan API key di menu "⚙️ Pengaturan AI" atau di Environment Variables Vercel.');
-    }
+      console.warn('GEMINI_API_KEY tidak dikonfigurasi di server, auto-fallback ke KoboiLLM...');
+      provider = 'koboillm';
+    } else {
+      const ai = new GoogleGenAI({ apiKey });
+      // Prioritize user's requested model if provided, then cascade
+      const modelsToTry = modelHeader 
+        ? [modelHeader, ...GEMINI_FALLBACK_MODELS.filter(m => m !== modelHeader)] 
+        : GEMINI_FALLBACK_MODELS;
 
-    const ai = new GoogleGenAI({ apiKey });
-    // Prioritize user's requested model if provided, then cascade
-    const modelsToTry = modelHeader 
-      ? [modelHeader, ...GEMINI_FALLBACK_MODELS.filter(m => m !== modelHeader)] 
-      : GEMINI_FALLBACK_MODELS;
+      let lastError: any = null;
+      let succeeded = false;
+      for (const model of modelsToTry) {
+        try {
+          const contents: any[] = [prompt];
+          if (data && mimeType) {
+            contents.push({
+              inlineData: {
+                data,
+                mimeType
+              }
+            });
+          }
 
-    let lastError: any = null;
-    for (const model of modelsToTry) {
-      try {
-        const contents: any[] = [prompt];
-        if (data && mimeType) {
-          contents.push({
-            inlineData: {
-              data,
-              mimeType
+          const response = await ai.models.generateContent({
+            model,
+            contents,
+            config: {
+              responseMimeType: "application/json"
             }
           });
-        }
 
-        const response = await ai.models.generateContent({
-          model,
-          contents,
-          config: {
-            responseMimeType: "application/json"
+          const text = response.text || '{}';
+          succeeded = true;
+          return safeJsonParse(text, fallback);
+        } catch (err: any) {
+          lastError = err;
+          const msg = err?.message || '';
+          if (
+            msg.includes('429') || 
+            msg.includes('RESOURCE_EXHAUSTED') || 
+            msg.includes('503') || 
+            msg.includes('404') ||
+            msg.includes('quota')
+          ) {
+            console.warn(`Gemini model [${model}] quota limit/unavailable (${msg.slice(0, 110)}). Mencoba model fallback berikutnya...`);
+            continue;
           }
-        });
-
-        const text = response.text || '{}';
-        return safeJsonParse(text, fallback);
-      } catch (err: any) {
-        lastError = err;
-        const msg = err?.message || '';
-        // If quota exceeded (429 / RESOURCE_EXHAUSTED) or model unavailable/busy (503 / 404), try next model
-        if (
-          msg.includes('429') || 
-          msg.includes('RESOURCE_EXHAUSTED') || 
-          msg.includes('503') || 
-          msg.includes('404') ||
-          msg.includes('quota')
-        ) {
-          console.warn(`Gemini model [${model}] quota limit/unavailable (${msg.slice(0, 110)}). Mencoba model fallback berikutnya...`);
-          continue;
+          break;
         }
-        // Unexpected non-quota error, throw immediately
-        throw err;
+      }
+
+      if (!succeeded) {
+        console.warn(`Semua model Gemini gagal (${lastError?.message}), auto-fallback ke KoboiLLM...`);
+        provider = 'koboillm';
       }
     }
-
-    const errorMsg = lastError?.message || '';
-    if (errorMsg.includes('429') || errorMsg.includes('RESOURCE_EXHAUSTED') || errorMsg.includes('quota')) {
-      throw new Error(
-        'Kuota harian Google Gemini gratis telah habis (Error 429). Anda dapat beralih ke penyedia pihak ketiga (OpenAI / OpenRouter) atau masukkan API Key pribadi Anda melalui menu "⚙️ Pengaturan AI" di bagian atas.'
-      );
-    }
-    throw new Error(`Semua model Gemini gagal: ${errorMsg}`);
   }
 
   // 2. OpenAI / OpenRouter / Groq / Custom Provider (OpenAI Compatible Chat Completions API)
@@ -795,11 +793,15 @@ apiRouter.post('/extract-bei', upload.single('file'), async (req, res) => {
           if (rawUtf8 && rawUtf8.length > 20) {
             extractedText = rawUtf8;
           } else if (file) {
-            const markitdownModule = await import('markitdown-js');
-            const Markitdown = markitdownModule.default || markitdownModule.MarkItDown || (markitdownModule as any).Markitdown;
-            const converter = new Markitdown();
-            const result = await converter.convert(file.path, { fileExtension: ext });
-            extractedText = result?.textContent || '';
+            try {
+              const markitdownModule = await import('markitdown-js');
+              const Markitdown = markitdownModule.default || markitdownModule.MarkItDown || (markitdownModule as any).Markitdown;
+              const converter = new Markitdown();
+              const result = await converter.convert(file.path, { fileExtension: ext });
+              extractedText = result?.textContent || '';
+            } catch (mdErr) {
+              console.warn('Markitdown extraction error in fallback:', mdErr);
+            }
           }
         } catch (e) {
           console.warn('Fallback text extraction failed:', e);

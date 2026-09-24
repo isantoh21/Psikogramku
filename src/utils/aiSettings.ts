@@ -84,7 +84,20 @@ export function getAISettings(): AISettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      return { ...DEFAULT_AI_SETTINGS, ...JSON.parse(raw) };
+      const parsed = JSON.parse(raw);
+      // If user had legacy settings with 'gemini' and no API key, auto-migrate to KoboiLLM default
+      // so requests are handled directly by the client without hitting Vercel serverless limits
+      if (parsed.provider === 'gemini' && (!parsed.apiKey || parsed.apiKey.trim() === '')) {
+        return {
+          ...DEFAULT_AI_SETTINGS,
+          ...parsed,
+          provider: 'koboillm',
+          apiKey: DEFAULT_AI_SETTINGS.apiKey,
+          baseUrl: DEFAULT_AI_SETTINGS.baseUrl,
+          model: DEFAULT_AI_SETTINGS.model
+        };
+      }
+      return { ...DEFAULT_AI_SETTINGS, ...parsed };
     }
   } catch (e) {
     console.error('Failed to load AI settings from localStorage', e);

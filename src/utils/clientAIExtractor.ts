@@ -16,14 +16,16 @@ export function cleanJsonOutput(rawText: string, fallback: any = {}) {
 
 /**
  * Checks whether client-side direct execution is possible.
- * Works if provider is koboillm, custom, openai, openrouter, groq, or gemini with user key.
+ * Works if provider is koboillm, custom, openai, openrouter, groq, or gemini.
  */
 export function canExecuteDirectly(settings?: AISettings): boolean {
   const s = settings || getAISettings();
-  if (!s) return false;
+  if (!s) return true;
   if (s.provider === 'koboillm') return true;
   if (s.provider === 'custom' && !!s.baseUrl && !!s.apiKey) return true;
   if (s.apiKey && s.apiKey.trim() !== '') return true;
+  // If provider is gemini without user API key, direct call is still supported via built-in KoboiLLM
+  if (s.provider === 'gemini') return true;
   return false;
 }
 
@@ -53,6 +55,11 @@ export async function callDirectAI({
     baseUrl = baseUrl || 'https://api.koboillm.com/v1';
     apiKey = apiKey || 'sk-1wbq_Yt3lZPxwkDRXZYQow';
     model = model || 'gemini/gemini-2.5-flash';
+  } else if (settings.provider === 'gemini' && (!settings.apiKey || settings.apiKey.trim() === '')) {
+    // If user is on default Gemini without an API key, use direct KoboiLLM connection
+    baseUrl = 'https://api.koboillm.com/v1';
+    apiKey = 'sk-1wbq_Yt3lZPxwkDRXZYQow';
+    model = 'gemini/gemini-2.5-flash';
   } else if (settings.provider === 'openai') {
     baseUrl = baseUrl || 'https://api.openai.com/v1';
     model = model || 'gpt-4o-mini';
@@ -82,13 +89,19 @@ export async function callDirectAI({
     }
   ];
 
+  // Only attach image_url if mimeType is an image or PDF
+  // (Word .docx or plain text are already converted to text above and will cause 400 Bad Request if passed to image_url)
   if (data && mimeType) {
-    userContent.push({
-      type: 'image_url',
-      image_url: {
-        url: `data:${mimeType};base64,${data}`
-      }
-    });
+    const isImage = mimeType.startsWith('image/');
+    const isPdf = mimeType === 'application/pdf';
+    if (isImage || isPdf) {
+      userContent.push({
+        type: 'image_url',
+        image_url: {
+          url: `data:${mimeType};base64,${data}`
+        }
+      });
+    }
   }
 
   const response = await fetch(endpoint, {
@@ -339,46 +352,94 @@ export async function executeExtraction({
 
   // Fallback to server API endpoint
   console.log(`[AI Client] Menggunakan server endpoint: ${apiEndpoint}`);
-  const response = await fetch(apiEndpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAIHeaders()
-    },
-    body: JSON.stringify({
-      mimeType,
-      data,
-      filename,
-      text,
-      ...extraBody
-    })
-  });
+  try {
+    const response = await fetch(apiEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAIHeaders()
+      },
+      body: JSON.stringify({
+        mimeType,
+        data,
+        filename,
+        text,
+        ...extraBody
+      })
+    });
 
-  let resData: any;
-  let rawText = '';
-  const contentType = response.headers.get('content-type');
-  if (contentType && contentType.includes('application/json')) {
-    resData = await response.json();
-  } else {
-    rawText = await response.text();
+    let resData: any;
+    let rawText = '';
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      resData = await response.json();
+    } else {
+      rawText = await response.text();
+    }
+
+    if (!response.ok) {
+      // If server failed with FUNCTION_INVOCATION_FAILED, timeout (504), 500, or payload limit (413),
+      // retry with direct KoboiLLM AI call immediately as emergency fallback!
+      if (
+        rawText.includes('FUNCTION_INVOCATION_FAILED') ||
+        response.status === 500 ||
+        response.status === 504 ||
+        response.status === 413
+      ) {
+        console.warn(`[AI Client] Serverless gagal (Status ${response.status}). Mencoba fallback langsung ke KoboiLLM...`);
+        try {
+          const directFallback = await callDirectAI({
+            prompt,
+            data,
+            mimeType,
+            text
+          });
+          if (directFallback && typeof directFallback === 'object' && Object.keys(directFallback).length > 0) {
+            return directFallback;
+          }
+        } catch (retryErr: any) {
+          console.error('[AI Client] Direct fallback also failed:', retryErr);
+        }
+      }
+
+      if (response.status === 404) {
+        throw new Error('API Server Vercel tidak ditemukan (Status 404). Silakan periksa file vercel.json atau gunakan Custom Provider di Pengaturan AI.');
+      }
+      if (response.status === 413) {
+        throw new Error('Ukuran file melebihi batas serverless Vercel (4.5MB). Harap pilih file yang lebih kecil atau gunakan mode Custom Provider.');
+      }
+      if (response.status === 504) {
+        throw new Error('Vercel Serverless Function Timeout (504). Batas waktu serverless habis. Disarankan menggunakan KoboiLLM di menu "⚙️ Pengaturan AI".');
+      }
+      const errText = resData?.error || rawText || '';
+      if (errText.includes('FUNCTION_INVOCATION_FAILED')) {
+        throw new Error('Server Vercel Serverless mengalami FUNCTION_INVOCATION_FAILED. Silakan buka menu "⚙️ Pengaturan AI" di atas dan pilih penyedia "KoboiLLM" untuk proses langsung tanpa batasan server.');
+      }
+      if (errText.includes('429') || errText.includes('RESOURCE_EXHAUSTED') || errText.includes('quota')) {
+        throw new Error('Kuota harian gratis AI telah habis (Error 429). Silakan buka menu "⚙️ Pengaturan AI" untuk memasukkan API Key atau beralih ke KoboiLLM / OpenAI.');
+      }
+      throw new Error(errText || `Gagal memproses file (Status ${response.status})`);
+    }
+
+    return resData;
+  } catch (netErr: any) {
+    // If network error occurred during fetch to server, try direct AI as safety net!
+    if (netErr?.message && !netErr.message.includes('Penyedia AI')) {
+      try {
+        console.warn('[AI Client] Network error saat memanggil server, mencoba direct AI...', netErr.message);
+        const directFallback = await callDirectAI({
+          prompt,
+          data,
+          mimeType,
+          text
+        });
+        if (directFallback && typeof directFallback === 'object') {
+          return directFallback;
+        }
+      } catch (directErr) {
+        console.error('[AI Client] Direct fallback also failed:', directErr);
+      }
+    }
+    throw netErr;
   }
-
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error('API Server Vercel tidak ditemukan (Status 404). Silakan periksa file vercel.json atau gunakan Custom Provider di Pengaturan AI.');
-    }
-    if (response.status === 413) {
-      throw new Error('Ukuran file melebihi batas serverless Vercel (4.5MB). Harap pilih file yang lebih kecil atau gunakan mode Custom Provider.');
-    }
-    if (response.status === 504) {
-      throw new Error('Vercel Serverless Function Timeout (504). Batas waktu gratis Vercel telah habis. Silakan buka menu "⚙️ Pengaturan AI" dan beralih ke KoboiLLM / OpenAI untuk koneksi langsung tanpa batasan serverless.');
-    }
-    const errText = resData?.error || rawText || '';
-    if (errText.includes('429') || errText.includes('RESOURCE_EXHAUSTED') || errText.includes('quota')) {
-      throw new Error('Kuota harian gratis AI telah habis (Error 429). Silakan buka menu "⚙️ Pengaturan AI" untuk memasukkan API Key atau beralih ke KoboiLLM / OpenAI.');
-    }
-    throw new Error(errText || `Gagal memproses file (Status ${response.status})`);
-  }
-
-  return resData;
 }

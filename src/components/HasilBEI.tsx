@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, FileText, Trash2, Loader2, Download, CheckCircle2, AlertCircle, X, Sparkles } from 'lucide-react';
+import mammoth from 'mammoth';
 import { getAIHeaders, getAISettings } from '../utils/aiSettings';
 import { executeExtraction, canExecuteDirectly, BEI_PROMPT } from '../utils/clientAIExtractor';
 
@@ -119,7 +120,7 @@ export function HasilBEI() {
       );
     }
 
-    // 1. Text / Markdown files
+    // 1. Text / Markdown / CSV files
     if (ext === '.txt' || ext === '.md' || ext === '.csv' || ext === '.json') {
       const textContent = await file.text();
       return {
@@ -127,6 +128,24 @@ export function HasilBEI() {
         mimeType: 'text/plain',
         filename
       };
+    }
+
+    // 2. Word Documents (.docx) - extract text directly in client browser to avoid serverless payload / timeout issues!
+    if (ext === '.docx') {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const mammothResult = await mammoth.extractRawText({ arrayBuffer });
+        const docxText = (mammothResult?.value || '').trim();
+        if (docxText) {
+          return {
+            text: docxText,
+            mimeType: 'text/plain',
+            filename
+          };
+        }
+      } catch (mammothErr) {
+        console.warn('Direct browser mammoth docx extraction failed, using binary upload fallback:', mammothErr);
+      }
     }
 
     // 2. Images: compress if large
