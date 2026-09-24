@@ -8,8 +8,10 @@ import { FormInputStaff } from './components/FormInputStaff';
 import { PreviewPsikogramStaff } from './components/PreviewPsikogramStaff';
 import { MarkItDown } from './components/MarkItDown';
 import { HasilBEI } from './components/HasilBEI';
+import { AISettingsModal } from './components/AISettingsModal';
+import { getAISettings, AISettings } from './utils/aiSettings';
 import { AppState, SdAppState, StaffAppState, INITIAL_STATE, INITIAL_SD_STATE, INITIAL_STAFF_STATE } from './types';
-import { FileText, Menu, X, Briefcase, GraduationCap, Users, FileDown } from 'lucide-react';
+import { FileText, Menu, X, Briefcase, GraduationCap, Users, FileDown, Settings, Bot, Sparkles } from 'lucide-react';
 
 export default function App() {
   const location = useLocation();
@@ -23,6 +25,8 @@ export default function App() {
           ? 'sd' 
           : 'penjurusan';
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isAISettingsOpen, setIsAISettingsOpen] = useState(false);
+  const [aiSettings, setAiSettings] = useState<AISettings>(getAISettings());
 
   const [state, setState] = useState<AppState>(INITIAL_STATE);
   const [sdState, setSdState] = useState<SdAppState>(INITIAL_SD_STATE);
@@ -276,6 +280,22 @@ export default function App() {
               </Link>
             </nav>
           </div>
+
+          {/* AI Settings button in sidebar footer */}
+          <div className="p-4 border-t border-gray-800 bg-gray-950/40">
+            <button
+              onClick={() => setIsAISettingsOpen(true)}
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-gray-200 transition-all group"
+            >
+              <div className="flex items-center space-x-2.5">
+                <Bot className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300" />
+                <span className="text-xs font-medium">Pengaturan AI</span>
+              </div>
+              <span className="text-[10px] font-mono font-semibold uppercase px-1.5 py-0.5 rounded bg-indigo-900/60 text-indigo-300 border border-indigo-700/50">
+                {aiSettings.provider}
+              </span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -283,16 +303,33 @@ export default function App() {
         
         {/* Header - Hidden on print */}
         <header className="bg-indigo-700 text-white shadow-md print:hidden flex-none z-10">
-          <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-1 text-white hover:text-gray-200 focus:outline-none"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-            <h1 className="text-xl font-bold tracking-tight truncate">
-              {activeApp === 'penjurusan' ? 'Psikogram Tes Minat Bakat Penjurusan' : activeApp === 'sd' ? 'Psikogram Tes Minat Bakat SD' : activeApp === 'markitdown' ? 'Mark It Down Converter' : activeApp === 'bei' ? 'Hasil BEI' : 'Psikogram Tes Seleksi Staff'}
-            </h1>
+          <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 min-w-0">
+              <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="p-1 text-white hover:text-gray-200 focus:outline-none"
+              >
+                <Menu className="w-6 h-6" />
+              </button>
+              <h1 className="text-xl font-bold tracking-tight truncate">
+                {activeApp === 'penjurusan' ? 'Psikogram Tes Minat Bakat Penjurusan' : activeApp === 'sd' ? 'Psikogram Tes Minat Bakat SD' : activeApp === 'markitdown' ? 'Mark It Down Converter' : activeApp === 'bei' ? 'Hasil BEI' : 'Psikogram Tes Seleksi Staff'}
+              </h1>
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsAISettingsOpen(true)}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-800/90 hover:bg-indigo-900 border border-indigo-400/40 text-xs sm:text-sm font-medium text-white shadow transition-all hover:scale-[1.02] active:scale-[0.98]"
+                title="Konfigurasi AI Provider & API Key"
+              >
+                <Bot className="w-4 h-4 text-indigo-300" />
+                <span className="hidden sm:inline">Pengaturan AI</span>
+                <span className="text-[11px] px-1.5 py-0.5 rounded bg-indigo-950/60 text-indigo-200 border border-indigo-400/30 uppercase tracking-wider font-semibold font-mono">
+                  {aiSettings.provider}
+                </span>
+              </button>
+            </div>
           </div>
         </header>
 
@@ -346,6 +383,13 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {/* AI Provider & API Key Settings Modal */}
+      <AISettingsModal
+        isOpen={isAISettingsOpen}
+        onClose={() => setIsAISettingsOpen(false)}
+        onSaved={() => setAiSettings(getAISettings())}
+      />
 
       {/* Custom Scrollbar CSS specifically for the scrollable areas */}
       <style>{`

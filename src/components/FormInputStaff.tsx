@@ -10,7 +10,8 @@ import {
   getStaffScaleCode,
   getStaffScaleFullLabel
 } from '../utils/scoring';
-import { RefreshCw, FileText, Copy, Check, Upload, Loader2, Calculator, Info, ChevronDown, ChevronUp, CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { getAIHeaders, getAISettings } from '../utils/aiSettings';
+import { RefreshCw, FileText, Copy, Check, Upload, Loader2, Calculator, Info, ChevronDown, ChevronUp, CheckCircle2, AlertCircle, X, Sparkles } from 'lucide-react';
 
 interface FormInputStaffProps {
   state?: StaffAppState;
@@ -164,9 +165,14 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
           'Vercel Serverless Function gagal dijalankan (FUNCTION_INVOCATION_FAILED). Pastikan kode perubahan terbaru sudah di-push ke GitHub dan file PDF berukuran di bawah 3MB.'
         );
       }
+      if (errText.includes('429') || errText.includes('RESOURCE_EXHAUSTED') || errText.includes('quota')) {
+        throw new Error(
+          'Kuota harian gratis AI telah habis (Error 429: Quota Exceeded). Silakan buka menu "⚙️ Pengaturan AI" di bagian atas untuk beralih ke OpenAI / OpenRouter atau memasukkan API Key pribadi Anda.'
+        );
+      }
       if (errText.includes('GEMINI_API_KEY')) {
         throw new Error(
-          'GEMINI_API_KEY belum dikonfigurasi di Vercel! Buka Vercel Dashboard > Project Settings > Environment Variables, lalu tambahkan GEMINI_API_KEY.'
+          'GEMINI_API_KEY belum dikonfigurasi. Anda dapat mengisinya di menu "⚙️ Pengaturan AI" atau di Environment Variables Vercel.'
         );
       }
       throw new Error(errText || `Gagal memproses file (Status ${response.status})`);
@@ -240,10 +246,11 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
     if (!file) return;
 
     setIsUploadingIST(true);
+    const aiConfig = getAISettings();
     setUploadStatus({
       type: 'loading',
       title: 'Mengekstrak Dokumen Tes IST...',
-      message: `Sedang memproses "${file.name}" via AI Gemini. Mohon tunggu beberapa detik...`
+      message: `Sedang memproses "${file.name}" via ${aiConfig.provider.toUpperCase()} (${aiConfig.model || 'AI'}). Mohon tunggu beberapa detik...`
     });
 
     try {
@@ -251,7 +258,10 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
       
       const response = await fetch('/api/extract-ist', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...getAIHeaders()
+        },
         body: JSON.stringify({
           mimeType,
           data: base64,
@@ -393,10 +403,11 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
     if (!file) return;
 
     setIsUploadingKraepelin(true);
+    const aiConfigKraepelin = getAISettings();
     setUploadStatus({
       type: 'loading',
       title: 'Mengekstrak Data Tes Kraepelin...',
-      message: `Sedang memproses "${file.name}" via AI Gemini. Mohon tunggu beberapa detik...`
+      message: `Sedang memproses "${file.name}" via ${aiConfigKraepelin.provider.toUpperCase()} (${aiConfigKraepelin.model || 'AI'}). Mohon tunggu beberapa detik...`
     });
 
     try {
@@ -404,7 +415,10 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
       
       const response = await fetch('/api/extract-kraepelin', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...getAIHeaders()
+        },
         body: JSON.stringify({
           mimeType,
           data: base64,
@@ -462,10 +476,11 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
     if (!file) return;
 
     setIsUploadingPapi(true);
+    const aiConfigPapi = getAISettings();
     setUploadStatus({
       type: 'loading',
       title: 'Mengekstrak Data PAPI Kostick...',
-      message: `Sedang memproses "${file.name}" via AI Gemini. Mohon tunggu beberapa detik...`
+      message: `Sedang memproses "${file.name}" via ${aiConfigPapi.provider.toUpperCase()} (${aiConfigPapi.model || 'AI'}). Mohon tunggu beberapa detik...`
     });
 
     try {
@@ -473,7 +488,10 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
       
       const response = await fetch('/api/extract-papikostik', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...getAIHeaders()
+        },
         body: JSON.stringify({
           mimeType,
           data: base64,
@@ -536,10 +554,11 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
     if (!file) return;
 
     setIsUploadingMbti(true);
+    const aiConfigMbti = getAISettings();
     setUploadStatus({
       type: 'loading',
       title: 'Mengekstrak Data MBTI...',
-      message: `Sedang memproses "${file.name}" via AI Gemini. Mohon tunggu beberapa detik...`
+      message: `Sedang memproses "${file.name}" via ${aiConfigMbti.provider.toUpperCase()} (${aiConfigMbti.model || 'AI'}). Mohon tunggu beberapa detik...`
     });
 
     try {
@@ -547,12 +566,15 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
       
       const response = await fetch('/api/extract-mbti', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...getAIHeaders()
+        },
         body: JSON.stringify({
           mimeType,
           data: base64,
           filename: file.name,
-          currentKepribadian: state.kepribadian
+          currentKepribadian: state?.kepribadian
         })
       });
       

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Upload, FileText, Trash2, Loader2, Download, CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { Upload, FileText, Trash2, Loader2, Download, CheckCircle2, AlertCircle, X, Sparkles } from 'lucide-react';
+import { getAIHeaders, getAISettings } from '../utils/aiSettings';
 
 type STAR = { situation: string; task: string; action: string; result: string };
 type BEIState = {
@@ -89,6 +90,9 @@ export function HasilBEI() {
     try {
       const response = await fetch('/api/extract-bei', {
         method: 'POST',
+        headers: {
+          ...getAIHeaders()
+        },
         body: formData,
       });
 
@@ -112,8 +116,11 @@ export function HasilBEI() {
           throw new Error('Server Vercel Timeout (Status 504). Proses ekstraksi AI melebihi batas waktu serverless.');
         }
         const errText = data?.error || rawText || '';
+        if (errText.includes('429') || errText.includes('RESOURCE_EXHAUSTED') || errText.includes('quota')) {
+          throw new Error('Kuota harian gratis AI telah habis (Error 429). Silakan gunakan tombol "⚙️ Pengaturan AI" di bagian atas untuk beralih ke OpenAI / OpenRouter atau memasukkan API Key pribadi Anda.');
+        }
         if (errText.includes('GEMINI_API_KEY')) {
-          throw new Error('GEMINI_API_KEY belum dikonfigurasi di Vercel! Buka Vercel Dashboard > Project Settings > Environment Variables, lalu tambahkan GEMINI_API_KEY.');
+          throw new Error('GEMINI_API_KEY belum dikonfigurasi. Anda dapat mengisinya di menu "⚙️ Pengaturan AI" atau di Environment Variables Vercel.');
         }
         throw new Error(errText || `Gagal mengekstrak data dari file (Status ${response.status})`);
       }
