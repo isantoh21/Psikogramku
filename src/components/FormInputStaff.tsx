@@ -11,6 +11,13 @@ import {
   getStaffScaleFullLabel
 } from '../utils/scoring';
 import { getAIHeaders, getAISettings } from '../utils/aiSettings';
+import { 
+  executeExtraction, 
+  IST_PROMPT, 
+  KRAEPELIN_PROMPT, 
+  PAPI_PROMPT, 
+  getMBTIPrompt 
+} from '../utils/clientAIExtractor';
 import { RefreshCw, FileText, Copy, Check, Upload, Loader2, Calculator, Info, ChevronDown, ChevronUp, CheckCircle2, AlertCircle, X, Sparkles } from 'lucide-react';
 
 interface FormInputStaffProps {
@@ -256,20 +263,13 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
     try {
       const { base64, mimeType } = await readFileAsBase64(file);
       
-      const response = await fetch('/api/extract-ist', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...getAIHeaders()
-        },
-        body: JSON.stringify({
-          mimeType,
-          data: base64,
-          filename: file.name
-        })
+      const data = await executeExtraction({
+        apiEndpoint: '/api/extract-ist',
+        prompt: IST_PROMPT,
+        data: base64,
+        mimeType,
+        filename: file.name
       });
-      
-      const data = (await handleApiResponse(response)) || {};
       
       const {
         clientData: extractedClientData,
@@ -281,7 +281,7 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
         tarafBerpikirSistematis,
         tarafPemahamanKonsep,
         tarafAnalisaSintesa
-      } = data;
+      } = data || {};
 
       setState(prev => {
         const base = prev || INITIAL_STAFF_STATE;
@@ -413,21 +413,15 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
     try {
       const { base64, mimeType } = await readFileAsBase64(file);
       
-      const response = await fetch('/api/extract-kraepelin', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...getAIHeaders()
-        },
-        body: JSON.stringify({
-          mimeType,
-          data: base64,
-          filename: file.name
-        })
+      const data = await executeExtraction({
+        apiEndpoint: '/api/extract-kraepelin',
+        prompt: KRAEPELIN_PROMPT,
+        data: base64,
+        mimeType,
+        filename: file.name
       });
       
-      const data = (await handleApiResponse(response)) || {};
-      const { clientData: extractedClientData, sikapKerja } = data;
+      const { clientData: extractedClientData, sikapKerja } = data || {};
 
       setState(prev => {
         const base = prev || INITIAL_STAFF_STATE;
@@ -486,21 +480,15 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
     try {
       const { base64, mimeType } = await readFileAsBase64(file);
       
-      const response = await fetch('/api/extract-papikostik', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...getAIHeaders()
-        },
-        body: JSON.stringify({
-          mimeType,
-          data: base64,
-          filename: file.name
-        })
+      const data = await executeExtraction({
+        apiEndpoint: '/api/extract-papikostik',
+        prompt: PAPI_PROMPT,
+        data: base64,
+        mimeType,
+        filename: file.name
       });
       
-      const data = (await handleApiResponse(response)) || {};
-      const { clientData: extractedClientData, kepribadian } = data;
+      const { clientData: extractedClientData, kepribadian } = data || {};
 
       setState(prev => {
         const base = prev || INITIAL_STAFF_STATE;
@@ -564,22 +552,18 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
     try {
       const { base64, mimeType } = await readFileAsBase64(file);
       
-      const response = await fetch('/api/extract-mbti', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...getAIHeaders()
-        },
-        body: JSON.stringify({
-          mimeType,
-          data: base64,
-          filename: file.name,
+      const data = await executeExtraction({
+        apiEndpoint: '/api/extract-mbti',
+        prompt: getMBTIPrompt(state?.kepribadian),
+        data: base64,
+        mimeType,
+        filename: file.name,
+        extraBody: {
           currentKepribadian: state?.kepribadian
-        })
+        }
       });
       
-      const data = (await handleApiResponse(response)) || {};
-      const { clientData: extractedClientData, kepribadian } = data;
+      const { clientData: extractedClientData, kepribadian } = data || {};
 
       setState(prev => {
         const base = prev || INITIAL_STAFF_STATE;

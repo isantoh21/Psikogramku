@@ -334,6 +334,21 @@ export const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// Vercel Serverless Function route normalizer
+app.use((req, res, next) => {
+  const matchedPath = (req.headers['x-matched-path'] as string) || 
+                      (req.headers['x-vercel-matched-path'] as string) ||
+                      (req.headers['x-forwarded-uri'] as string);
+  const vercelRoute = (req.query?.__vercel_route__ as string);
+
+  if (matchedPath && matchedPath.startsWith('/api') && req.url !== matchedPath) {
+    req.url = matchedPath;
+  } else if (vercelRoute) {
+    req.url = `/api/${vercelRoute.replace(/^\//, '')}`;
+  }
+  next();
+});
+
 // Express Router for API endpoints
 const apiRouter = express.Router();
 

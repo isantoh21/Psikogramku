@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, FileText, Trash2, Loader2, Download, CheckCircle2, AlertCircle, X, Sparkles } from 'lucide-react';
 import { getAIHeaders, getAISettings } from '../utils/aiSettings';
+import { callDirectAI, canExecuteDirectly, BEI_PROMPT } from '../utils/clientAIExtractor';
 
 type STAR = { situation: string; task: string; action: string; result: string };
 type BEIState = {
@@ -75,7 +76,7 @@ export function HasilBEI() {
     setUploadFileName(file.name);
     setStatusMessage({ type: '', text: '' });
 
-    if (file.size > 4.4 * 1024 * 1024) {
+    if (file.size > 4.4 * 1024 * 1024 && !canExecuteDirectly()) {
       setIsUploading(false);
       setStatusMessage({
         type: 'error',
@@ -84,45 +85,79 @@ export function HasilBEI() {
       return;
     }
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-      const response = await fetch('/api/extract-bei', {
-        method: 'POST',
-        headers: {
-          ...getAIHeaders()
-        },
-        body: formData,
-      });
+      let data: any = null;
 
-      let data: any;
-      let rawText = '';
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        rawText = await response.text();
+      // Try direct client-side AI processing (bypasses Vercel Serverless Function 10s timeout & 4.5MB limits)
+      if (canExecuteDirectly()) {
+        try {
+          if (file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+            const textContent = await file.text();
+            data = await callDirectAI({
+              prompt: `${BEI_PROMPT}\n\n=== BERIKUT TEKS CATATAN / TRANSKRIP WAWANCARA DARI FILE (${file.name}) ===\n${textContent}`
+            });
+          } else if (file.type.includes('pdf') || file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            const base64Promise = new Promise<{ base64: string; mimeType: string }>((resolve, reject) => {
+              reader.onload = () => {
+                const res = reader.result as string;
+                const base64 = res.split(',')[1];
+                resolve({ base64, mimeType: file.type || 'application/pdf' });
+              };
+              reader.onerror = reject;
+            });
+            reader.readAsDataURL(file);
+            const { base64, mimeType } = await base64Promise;
+            data = await callDirectAI({
+              prompt: BEI_PROMPT,
+              data: base64,
+              mimeType
+            });
+          }
+        } catch (clientErr: any) {
+          console.warn('Client direct BEI extraction failed, trying server:', clientErr);
+        }
       }
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error('API Server tidak ditemukan di Vercel (Status 404). Pastikan file vercel.json dan folder api/ sudah terdeploy ke repositori GitHub.');
+      if (!data) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch('/api/extract-bei', {
+          method: 'POST',
+          headers: {
+            ...getAIHeaders()
+          },
+          body: formData,
+        });
+
+        let rawText = '';
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          rawText = await response.text();
         }
-        if (response.status === 413) {
-          throw new Error('Ukuran file melebihi batas serverless Vercel (Maksimal 4.5MB). Harap kompres file sebelum diunggah.');
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw new Error('API Server tidak ditemukan di Vercel (Status 404). Pastikan file vercel.json dan folder api/ sudah terdeploy ke repositori GitHub.');
+          }
+          if (response.status === 413) {
+            throw new Error('Ukuran file melebihi batas serverless Vercel (Maksimal 4.5MB). Harap kompres file sebelum diunggah.');
+          }
+          if (response.status === 504) {
+            throw new Error('Server Vercel Timeout (Status 504). Proses ekstraksi AI melebihi batas waktu serverless. Disarankan menggunakan Custom Provider di Pengaturan AI.');
+          }
+          const errText = data?.error || rawText || '';
+          if (errText.includes('429') || errText.includes('RESOURCE_EXHAUSTED') || errText.includes('quota')) {
+            throw new Error('Kuota harian gratis AI telah habis (Error 429). Silakan gunakan tombol "⚙️ Pengaturan AI" di bagian atas untuk beralih ke OpenAI / OpenRouter atau memasukkan API Key pribadi Anda.');
+          }
+          if (errText.includes('GEMINI_API_KEY')) {
+            throw new Error('GEMINI_API_KEY belum dikonfigurasi. Anda dapat mengisinya di menu "⚙️ Pengaturan AI" atau di Environment Variables Vercel.');
+          }
+          throw new Error(errText || `Gagal mengekstrak data dari file (Status ${response.status})`);
         }
-        if (response.status === 504) {
-          throw new Error('Server Vercel Timeout (Status 504). Proses ekstraksi AI melebihi batas waktu serverless.');
-        }
-        const errText = data?.error || rawText || '';
-        if (errText.includes('429') || errText.includes('RESOURCE_EXHAUSTED') || errText.includes('quota')) {
-          throw new Error('Kuota harian gratis AI telah habis (Error 429). Silakan gunakan tombol "⚙️ Pengaturan AI" di bagian atas untuk beralih ke OpenAI / OpenRouter atau memasukkan API Key pribadi Anda.');
-        }
-        if (errText.includes('GEMINI_API_KEY')) {
-          throw new Error('GEMINI_API_KEY belum dikonfigurasi. Anda dapat mengisinya di menu "⚙️ Pengaturan AI" atau di Environment Variables Vercel.');
-        }
-        throw new Error(errText || `Gagal mengekstrak data dari file (Status ${response.status})`);
       }
 
       const extractedClient = data?.clientData || {};
