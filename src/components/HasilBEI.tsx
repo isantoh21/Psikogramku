@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, FileText, Trash2, Loader2, Download, CheckCircle2, AlertCircle, X, Sparkles } from 'lucide-react';
 import { getAIHeaders, getAISettings } from '../utils/aiSettings';
-import { callDirectAI, canExecuteDirectly, BEI_PROMPT } from '../utils/clientAIExtractor';
+import { executeExtraction, canExecuteDirectly, BEI_PROMPT } from '../utils/clientAIExtractor';
 
 type STAR = { situation: string; task: string; action: string; result: string };
 type BEIState = {
@@ -68,6 +68,114 @@ export function HasilBEI() {
     });
   };
 
+  const compressImageIfNeeded = async (file: File): Promise<Blob> => {
+    if (!file.type.startsWith('image/')) return file;
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const maxDim = 1600;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => resolve(blob || file), 'image/jpeg', 0.85);
+        } else {
+          resolve(file);
+        }
+      };
+      img.onerror = () => resolve(file);
+      img.src = url;
+    });
+  };
+
+  const readFileForBEI = async (file: File): Promise<{
+    text?: string;
+    base64?: string;
+    mimeType: string;
+    filename: string;
+  }> => {
+    const filename = file.name;
+    const ext = filename.substring(filename.lastIndexOf('.')).toLowerCase();
+
+    // Vercel serverless function payload limit is 4.5MB.
+    // When direct AI (KoboiLLM / OpenAI / etc) is not active, enforce 3MB safe limit.
+    if (!canExecuteDirectly() && file.size > 3.0 * 1024 * 1024 && !file.type.startsWith('image/')) {
+      throw new Error(
+        `Ukuran file (${(file.size / (1024 * 1024)).toFixed(1)}MB) melebihi batas aman upload Vercel (maksimal 3MB untuk mode serverless). Harap beralih ke KoboiLLM / OpenAI di "⚙️ Pengaturan AI" di bagian atas untuk upload langsung tanpa batasan serverless, atau kompres file terlebih dahulu.`
+      );
+    }
+
+    // 1. Text / Markdown files
+    if (ext === '.txt' || ext === '.md' || ext === '.csv' || ext === '.json') {
+      const textContent = await file.text();
+      return {
+        text: textContent,
+        mimeType: 'text/plain',
+        filename
+      };
+    }
+
+    // 2. Images: compress if large
+    if (file.type.startsWith('image/') || ['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) {
+      const blob = await compressImageIfNeeded(file);
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const res = reader.result as string;
+          const base64 = res.split(',')[1] || '';
+          resolve({
+            base64,
+            mimeType: blob.type || 'image/jpeg',
+            filename
+          });
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    // 3. Binary files (PDF, Word DOCX/DOC, Audio MP3/WAV/M4A)
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const res = reader.result as string;
+        const base64 = res.split(',')[1] || '';
+        let mimeType = file.type;
+        if (!mimeType || mimeType === 'application/octet-stream') {
+          if (ext === '.pdf') mimeType = 'application/pdf';
+          else if (ext === '.docx') mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+          else if (ext === '.doc') mimeType = 'application/msword';
+          else if (ext === '.mp3') mimeType = 'audio/mp3';
+          else if (ext === '.m4a') mimeType = 'audio/m4a';
+          else if (ext === '.wav') mimeType = 'audio/wav';
+          else if (ext === '.ogg') mimeType = 'audio/ogg';
+          else mimeType = 'application/pdf';
+        }
+        resolve({
+          base64,
+          mimeType,
+          filename
+        });
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement> | any) => {
     const file = e.target?.files?.[0] || e.dataTransfer?.files?.[0];
     if (!file) return;
@@ -76,89 +184,20 @@ export function HasilBEI() {
     setUploadFileName(file.name);
     setStatusMessage({ type: '', text: '' });
 
-    if (file.size > 4.4 * 1024 * 1024 && !canExecuteDirectly()) {
-      setIsUploading(false);
-      setStatusMessage({
-        type: 'error',
-        text: `Ukuran file (${(file.size / (1024 * 1024)).toFixed(1)}MB) melebihi batas upload Vercel (maksimal 4.5MB). Harap kompres dokumen atau audio terlebih dahulu.`
-      });
-      return;
-    }
+    const aiConfig = getAISettings();
+    const providerName = aiConfig.provider.toUpperCase();
 
     try {
-      let data: any = null;
+      const { base64, mimeType, text } = await readFileForBEI(file);
 
-      // Try direct client-side AI processing (bypasses Vercel Serverless Function 10s timeout & 4.5MB limits)
-      if (canExecuteDirectly()) {
-        try {
-          if (file.name.endsWith('.txt') || file.name.endsWith('.md')) {
-            const textContent = await file.text();
-            data = await callDirectAI({
-              prompt: `${BEI_PROMPT}\n\n=== BERIKUT TEKS CATATAN / TRANSKRIP WAWANCARA DARI FILE (${file.name}) ===\n${textContent}`
-            });
-          } else if (file.type.includes('pdf') || file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            const base64Promise = new Promise<{ base64: string; mimeType: string }>((resolve, reject) => {
-              reader.onload = () => {
-                const res = reader.result as string;
-                const base64 = res.split(',')[1];
-                resolve({ base64, mimeType: file.type || 'application/pdf' });
-              };
-              reader.onerror = reject;
-            });
-            reader.readAsDataURL(file);
-            const { base64, mimeType } = await base64Promise;
-            data = await callDirectAI({
-              prompt: BEI_PROMPT,
-              data: base64,
-              mimeType
-            });
-          }
-        } catch (clientErr: any) {
-          console.warn('Client direct BEI extraction failed, trying server:', clientErr);
-        }
-      }
-
-      if (!data) {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await fetch('/api/extract-bei', {
-          method: 'POST',
-          headers: {
-            ...getAIHeaders()
-          },
-          body: formData,
-        });
-
-        let rawText = '';
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          data = await response.json();
-        } else {
-          rawText = await response.text();
-        }
-
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error('API Server tidak ditemukan di Vercel (Status 404). Pastikan file vercel.json dan folder api/ sudah terdeploy ke repositori GitHub.');
-          }
-          if (response.status === 413) {
-            throw new Error('Ukuran file melebihi batas serverless Vercel (Maksimal 4.5MB). Harap kompres file sebelum diunggah.');
-          }
-          if (response.status === 504) {
-            throw new Error('Server Vercel Timeout (Status 504). Proses ekstraksi AI melebihi batas waktu serverless. Disarankan menggunakan Custom Provider di Pengaturan AI.');
-          }
-          const errText = data?.error || rawText || '';
-          if (errText.includes('429') || errText.includes('RESOURCE_EXHAUSTED') || errText.includes('quota')) {
-            throw new Error('Kuota harian gratis AI telah habis (Error 429). Silakan gunakan tombol "⚙️ Pengaturan AI" di bagian atas untuk beralih ke OpenAI / OpenRouter atau memasukkan API Key pribadi Anda.');
-          }
-          if (errText.includes('GEMINI_API_KEY')) {
-            throw new Error('GEMINI_API_KEY belum dikonfigurasi. Anda dapat mengisinya di menu "⚙️ Pengaturan AI" atau di Environment Variables Vercel.');
-          }
-          throw new Error(errText || `Gagal mengekstrak data dari file (Status ${response.status})`);
-        }
-      }
+      const data = await executeExtraction({
+        apiEndpoint: '/api/extract-bei',
+        prompt: BEI_PROMPT,
+        data: base64,
+        mimeType,
+        text,
+        filename: file.name
+      });
 
       const extractedClient = data?.clientData || {};
       setState(prev => {
@@ -185,7 +224,7 @@ export function HasilBEI() {
 
       setStatusMessage({
         type: 'success',
-        text: `Berhasil mengekstrak data wawancara BEI dari "${file.name}"!`
+        text: `Berhasil mengekstrak data wawancara BEI dari "${file.name}" via ${providerName}!`
       });
     } catch (error: any) {
       console.error('Error uploading BEI file:', error);
@@ -468,7 +507,7 @@ ${state.loyalitas.result || '-'}
               <div className="space-y-1">
                 <h3 className="font-semibold text-gray-900">Mengekstrak Dokumen Wawancara...</h3>
                 <p className="text-xs text-indigo-600 font-medium">
-                  {uploadFileName ? `Memproses file "${uploadFileName}" via AI Gemini` : 'Mohon tunggu beberapa detik...'}
+                  {uploadFileName ? `Memproses "${uploadFileName}" via ${getAISettings().provider.toUpperCase()} (${getAISettings().model || 'AI'})...` : 'Mohon tunggu beberapa detik...'}
                 </p>
               </div>
             ) : (

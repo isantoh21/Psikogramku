@@ -660,12 +660,19 @@ Jika data MBTI tidak ditemukan, kembalikan data kepribadian sebelumnya saja tanp
 
 // BEI Extraction
 apiRouter.post('/extract-bei', upload.single('file'), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'Tidak ada file yang diunggah' });
   const file = req.file;
+  const body = req.body || {};
+
+  if (!file && !body.data && !body.text) {
+    return res.status(400).json({ error: 'Tidak ada file atau dokumen yang diunggah' });
+  }
+
+  const tempPathToDelete: string | null = file ? file.path : null;
 
   try {
-    const ext = path.extname(file.originalname).toLowerCase();
-    let mimeType = file.mimetype;
+    const originalName = file ? file.originalname : (body.filename || 'dokumen.pdf');
+    const ext = path.extname(originalName).toLowerCase();
+    let mimeType = file ? file.mimetype : (body.mimeType || 'application/pdf');
     if (!mimeType || mimeType === 'application/octet-stream') {
       if (ext === '.pdf') mimeType = 'application/pdf';
       else if (ext === '.docx') mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -684,25 +691,39 @@ apiRouter.post('/extract-bei', upload.single('file'), async (req, res) => {
     let isMultimodal = false;
     let inlineDataPayload: { data: string; mimeType: string } | null = null;
 
-    if (ext === '.docx') {
-      try {
-        const mammothResult = await mammoth.extractRawText({ path: file.path });
-        extractedText = mammothResult?.value || '';
-      } catch (docxErr) {
-        console.warn('Mammoth extraction failed, falling back:', docxErr);
+    if (body.text && body.text.trim()) {
+      extractedText = body.text;
+    } else if (file) {
+      if (ext === '.docx') {
+        try {
+          const mammothResult = await mammoth.extractRawText({ path: file.path });
+          extractedText = mammothResult?.value || '';
+        } catch (docxErr) {
+          console.warn('Mammoth extraction failed, falling back:', docxErr);
+        }
+      } else if (ext === '.txt' || ext === '.md' || ext === '.csv' || ext === '.json') {
+        try {
+          extractedText = fs.readFileSync(file.path, 'utf-8');
+        } catch (txtErr) {
+          console.warn('Text file read failed:', txtErr);
+        }
       }
-    } else if (ext === '.txt' || ext === '.md' || ext === '.csv' || ext === '.json') {
-      try {
-        extractedText = fs.readFileSync(file.path, 'utf-8');
-      } catch (txtErr) {
-        console.warn('Text file read failed:', txtErr);
+    } else if (body.data) {
+      const buffer = Buffer.from(body.data, 'base64');
+      if (ext === '.docx') {
+        try {
+          const mammothResult = await mammoth.extractRawText({ buffer });
+          extractedText = mammothResult?.value || '';
+        } catch (docxErr) {
+          console.warn('Mammoth buffer extraction failed:', docxErr);
+        }
+      } else if (ext === '.txt' || ext === '.md' || ext === '.csv' || ext === '.json') {
+        extractedText = buffer.toString('utf-8');
       }
     }
 
     if (!extractedText.trim()) {
-      const fileBuffer = fs.readFileSync(file.path);
-      const base64Data = fileBuffer.toString('base64');
-      
+      let base64Data = '';
       let targetMime = mimeType;
       if (ext === '.pdf') targetMime = 'application/pdf';
       else if (['.jpg', '.jpeg'].includes(ext)) targetMime = 'image/jpeg';
@@ -715,6 +736,48 @@ apiRouter.post('/extract-bei', upload.single('file'), async (req, res) => {
       else if (ext === '.aac') targetMime = 'audio/aac';
       else if (ext === '.flac') targetMime = 'audio/flac';
 
+      if (file) {
+        const fileBuffer = fs.readFileSync(file.path);
+        base64Data = fileBuffer.toString('base64');
+        if (targetMime === 'application/pdf') {
+          try {
+            const uint8Data = new Uint8Array(fileBuffer.buffer, fileBuffer.byteOffset, fileBuffer.byteLength);
+            const pdfModule = await import('pdf-parse');
+            const PDFParseClass = (pdfModule as any).PDFParse;
+            if (PDFParseClass) {
+              const parser = new PDFParseClass(uint8Data);
+              const parsedRes = await parser.getText();
+              const pdfText = typeof parsedRes === 'string' ? parsedRes : (parsedRes?.text || '');
+              if (pdfText && pdfText.trim()) {
+                extractedText = pdfText.trim();
+              }
+            }
+          } catch (e) {
+            console.warn('PDF text extraction error:', e);
+          }
+        }
+      } else if (body.data) {
+        base64Data = body.data;
+        if (targetMime === 'application/pdf') {
+          try {
+            const buffer = Buffer.from(body.data, 'base64');
+            const uint8Data = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+            const pdfModule = await import('pdf-parse');
+            const PDFParseClass = (pdfModule as any).PDFParse;
+            if (PDFParseClass) {
+              const parser = new PDFParseClass(uint8Data);
+              const parsedRes = await parser.getText();
+              const pdfText = typeof parsedRes === 'string' ? parsedRes : (parsedRes?.text || '');
+              if (pdfText && pdfText.trim()) {
+                extractedText = pdfText.trim();
+              }
+            }
+          } catch (e) {
+            console.warn('PDF buffer text extraction error:', e);
+          }
+        }
+      }
+
       if (
         targetMime.startsWith('image/') ||
         targetMime.startsWith('audio/') ||
@@ -725,12 +788,13 @@ apiRouter.post('/extract-bei', upload.single('file'), async (req, res) => {
           data: base64Data,
           mimeType: targetMime,
         };
-      } else {
+      } else if (!extractedText.trim()) {
         try {
-          const rawUtf8 = fileBuffer.toString('utf-8');
+          const rawBuffer = file ? fs.readFileSync(file.path) : Buffer.from(body.data, 'base64');
+          const rawUtf8 = rawBuffer.toString('utf-8');
           if (rawUtf8 && rawUtf8.length > 20) {
             extractedText = rawUtf8;
-          } else {
+          } else if (file) {
             const markitdownModule = await import('markitdown-js');
             const Markitdown = markitdownModule.default || markitdownModule.MarkItDown || (markitdownModule as any).Markitdown;
             const converter = new Markitdown();
@@ -788,7 +852,7 @@ Kembalikan HANYA format JSON valid persis seperti ini (tanpa markdown \`\`\`json
 }`;
 
     const effectivePrompt = extractedText.trim()
-      ? `${prompt}\n\n=== BERIKUT TEKS CATATAN / TRANSKRIP WAWANCARA DARI FILE (${file.originalname}) ===\n${extractedText}`
+      ? `${prompt}\n\n=== BERIKUT TEKS CATATAN / TRANSKRIP WAWANCARA DARI FILE (${originalName}) ===\n${extractedText}`
       : prompt;
 
     const parsedData = await callUnifiedAI({
@@ -817,19 +881,23 @@ Kembalikan HANYA format JSON valid persis seperti ini (tanpa markdown \`\`\`json
       loyalitas: { ...defaultSTAR, ...(parsedData.loyalitas || {}) }
     };
 
-    try {
-      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
-    } catch (e) {
-      console.error('Error deleting temp file:', e);
+    if (tempPathToDelete && fs.existsSync(tempPathToDelete)) {
+      try {
+        fs.unlinkSync(tempPathToDelete);
+      } catch (e) {
+        console.error('Error deleting temp file:', e);
+      }
     }
     
     res.json(normalizedData);
   } catch (error: any) {
     console.error('Extract BEI error:', error);
-    try {
-      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
-    } catch (e) {
-      console.error('Error deleting file in catch block:', e);
+    if (tempPathToDelete && fs.existsSync(tempPathToDelete)) {
+      try {
+        fs.unlinkSync(tempPathToDelete);
+      } catch (e) {
+        console.error('Error deleting file in catch block:', e);
+      }
     }
     res.status(500).json({ error: error?.message || 'Gagal mengekstrak data dari file.' });
   }

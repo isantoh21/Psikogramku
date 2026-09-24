@@ -35,11 +35,13 @@ export async function callDirectAI({
   prompt,
   data,
   mimeType,
+  text,
   fallback = {}
 }: {
   prompt: string;
   data?: string; // base64
   mimeType?: string;
+  text?: string;
   fallback?: any;
 }) {
   const settings = getAISettings();
@@ -67,10 +69,16 @@ export async function callDirectAI({
 
   const endpoint = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
 
+  let combinedText = prompt;
+  if (text && text.trim()) {
+    combinedText += `\n\n=== BERIKUT TEKS CATATAN / TRANSKRIP DOKUMEN ===\n${text.trim()}`;
+  }
+  combinedText += `\n\nPENTING: Kembalikan HANYA format JSON valid tanpa tanda kutip markdown \`\`\`json.`;
+
   const userContent: any[] = [
     { 
       type: 'text', 
-      text: `${prompt}\n\nPENTING: Kembalikan HANYA format JSON valid tanpa tanda kutip markdown \`\`\`json.` 
+      text: combinedText 
     }
   ];
 
@@ -298,25 +306,28 @@ export async function executeExtraction({
   data,
   mimeType,
   filename,
+  text,
   extraBody = {}
 }: {
   apiEndpoint: string;
   prompt: string;
-  data: string;
-  mimeType: string;
+  data?: string;
+  mimeType?: string;
   filename: string;
+  text?: string;
   extraBody?: Record<string, any>;
 }) {
   const settings = getAISettings();
 
-  // Try direct AI call first if configured
+  // Try direct AI call first if configured (Bypasses Vercel Serverless Function 10s timeout & 4.5MB limits)
   if (canExecuteDirectly(settings)) {
     try {
       console.log(`[AI Client] Memproses langsung via ${settings.provider.toUpperCase()} (Bypass Serverless)...`);
       const directResult = await callDirectAI({
         prompt,
         data,
-        mimeType
+        mimeType,
+        text
       });
       if (directResult && typeof directResult === 'object') {
         return directResult;
@@ -338,6 +349,7 @@ export async function executeExtraction({
       mimeType,
       data,
       filename,
+      text,
       ...extraBody
     })
   });
