@@ -369,6 +369,7 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
             tanggalTes: extractedClientData?.tanggalTes || baseClient.tanggalTes,
             pendidikan: extractedClientData?.pendidikan || baseClient.pendidikan,
             tujuanPemeriksaan: extractedClientData?.tujuanPemeriksaan || baseClient.tujuanPemeriksaan,
+            namaPT: extractedClientData?.namaPT || extractedClientData?.perusahaan || baseClient.namaPT,
           },
           iqScore: parsedIq,
           iqLabel: iqLabel || (parsedIq ? mapISTToLabel(Number(parsedIq)) : base.iqLabel),
@@ -448,7 +449,10 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
         supabaseUrl: processed.supabaseUrl
       });
       
-      const normalized = normalizeKraepelinResult(rawData);
+      const normalized = normalizeKraepelinResult({
+        ...rawData,
+        text: processed.text
+      });
       let { clientData: extractedClientData, sikapKerja: extractedSikapKerja, rawDetails } = normalized;
 
       // If coordinate-based direct extraction found high-confidence Sikap Kerja, use 100% ground-truth precision
@@ -481,6 +485,7 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
             pendidikan: extractedClientData.pendidikan || baseClient.pendidikan,
             alamat: extractedClientData.alamat || baseClient.alamat,
             tujuanPemeriksaan: extractedClientData.tujuanPemeriksaan || baseClient.tujuanPemeriksaan,
+            namaPT: extractedClientData.namaPT || baseClient.namaPT,
           },
           sikapKerja: {
             ...baseSikapKerja,
@@ -507,7 +512,7 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
       setUploadStatus({
         type: 'success',
         title: 'Ekstraksi Kraepelin Berhasil!',
-        message: `Hasil Sikap Kerja berhasil diekstrak dengan presisi: Kecepatan = ${getStaffScaleCode(extractedSikapKerja.kecepatan)} (${getStaffScaleFullLabel(extractedSikapKerja.kecepatan)}), Ketelitian = ${getStaffScaleCode(extractedSikapKerja.ketelitian)} (${getStaffScaleFullLabel(extractedSikapKerja.ketelitian)}), Ketekunan = ${getStaffScaleCode(extractedSikapKerja.ketekunan)} (${getStaffScaleFullLabel(extractedSikapKerja.ketekunan)}), Daya Tahan = ${getStaffScaleCode(extractedSikapKerja.dayaTahanStres)} (${getStaffScaleFullLabel(extractedSikapKerja.dayaTahanStres)}).`
+        message: `Hasil Sikap Kerja berhasil diekstrak dengan presisi: Kecepatan = ${getStaffScaleCode(extractedSikapKerja.kecepatan)} (${getStaffScaleFullLabel(extractedSikapKerja.kecepatan)}), Ketelitian = ${getStaffScaleCode(extractedSikapKerja.ketelitian)} (${getStaffScaleFullLabel(extractedSikapKerja.ketelitian)}), Ketekunan = ${getStaffScaleCode(extractedSikapKerja.ketekunan)} (${getStaffScaleFullLabel(extractedSikapKerja.ketekunan)}), Daya Tahan = ${getStaffScaleCode(extractedSikapKerja.dayaTahanStres)} (${getStaffScaleFullLabel(extractedSikapKerja.dayaTahanStres)}).` + (extractedClientData.namaPT ? ` Perusahaan/PT: ${extractedClientData.namaPT}.` : '')
       });
     } catch (err: any) {
       console.error('Kraepelin Upload Error:', err);
@@ -561,6 +566,7 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
             tempatTglLahir: extractedClientData?.tempatTglLahir || baseClient.tempatTglLahir,
             pendidikan: extractedClientData?.pendidikan || baseClient.pendidikan,
             tujuanPemeriksaan: extractedClientData?.tujuanPemeriksaan || baseClient.tujuanPemeriksaan,
+            namaPT: extractedClientData?.namaPT || extractedClientData?.perusahaan || baseClient.namaPT,
           },
           kepribadian: {
             ...baseKepribadian,
@@ -638,6 +644,7 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
             tempatTglLahir: extractedClientData?.tempatTglLahir || baseClient.tempatTglLahir,
             pendidikan: extractedClientData?.pendidikan || baseClient.pendidikan,
             tujuanPemeriksaan: extractedClientData?.tujuanPemeriksaan || baseClient.tujuanPemeriksaan,
+            namaPT: extractedClientData?.namaPT || extractedClientData?.perusahaan || baseClient.namaPT,
           },
           kepribadian: {
             ...baseKepribadian,
@@ -690,6 +697,7 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
   const generatePrompt = () => {
     const data = `--- DATA KLIEN ---
 Nama: ${clientData.nama || '[Kosong]'}
+Perusahaan / PT: ${clientData.namaPT || '[Kosong]'}
 Tujuan Pemeriksaan: ${clientData.tujuanPemeriksaan || '[Kosong]'}
 IQ: ${safeState.iqScore || '[Kosong]'} (${safeState.iqLabel || '[Kosong]'})
 
@@ -951,6 +959,16 @@ Paragraf 5 (Kepribadian - Ketaatan & Kemandirian):
                 onChange={(e) => updateState('clientData', 'tujuanPemeriksaan', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                 placeholder="Seleksi Karyawan Posisi..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nama Perusahaan / PT</label>
+              <input
+                type="text"
+                value={clientData.namaPT}
+                onChange={(e) => updateState('clientData', 'namaPT', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                placeholder="PT. PAMITRA JAYA KONSTRUKSI"
               />
             </div>
             <div>

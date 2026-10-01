@@ -101,7 +101,7 @@ export function PreviewPsikogramStaff({ state }: PreviewPsikogramStaffProps) {
 
           <div className="text-center font-bold mb-4 bg-gray-100 border-y-2 border-black py-1">
             <div className="text-sm">LAPORAN PEMERIKSAAN PSIKOLOGIS</div>
-            <div className="text-sm">PT. PAMITRA JAYA KONSTRUKSI</div>
+            <div className="text-sm">{clientData.namaPT || 'PT. PAMITRA JAYA KONSTRUKSI'}</div>
           </div>
           <div className="absolute top-28 right-10 bg-black text-white px-8 py-1 font-bold text-xs">
             RAHASIA

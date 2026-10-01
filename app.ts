@@ -521,7 +521,8 @@ Kembalikan HANYA format JSON valid persis seperti template di bawah ini (tanpa m
     "nomor": "nomor peserta/tes",
     "tanggalTes": "YYYY-MM-DD",
     "pendidikan": "pendidikan terakhir",
-    "tujuanPemeriksaan": "posisi/jabatan/tujuan pemeriksaan"
+    "tujuanPemeriksaan": "posisi/jabatan/tujuan pemeriksaan",
+    "namaPT": "nama PT / perusahaan jika tertera"
   },
   "iqScore": 0,
   "iqLabel": "kategori IQ seperti Rata-rata, Superior, Rata-rata Atas, dll",
@@ -577,7 +578,7 @@ apiRouter.post("/extract-kraepelin", async (req, res) => {
     }
     
     const prompt = `Anda adalah seorang psikolog dan ahli psikometri profesional yang sangat teliti dalam membaca hasil tes psikotes Kraepelin / Pauli / Sikap Kerja.
-Tugas Anda adalah mengekstrak data biodata peserta dan nilai 4 dimensi Sikap Kerja dari dokumen yang diberikan (berupa gambar tabel, grafik kurva kerja Kraepelin, lembar skoring, laporan psikotes, atau teks).
+Tugas Anda adalah mengekstrak data biodata peserta (termasuk NAMA PT / PERUSAHAAN jika tertera di dokumen, kop surat, header laporan, atau tabel identitas) dan nilai 4 dimensi Sikap Kerja dari dokumen yang diberikan (berupa gambar tabel, grafik kurva kerja Kraepelin, lembar skoring, laporan psikotes, atau teks).
 
 === PERINGATAN KRUSIAL: BACA HEADER KOLOM TABEL SECARA VERTIKAL DENGAN TELITI ===
 JANGAN PERNAH MENGASUMSIKAN URUTAN KOLOM DARI KIRI KE KANAN!
@@ -618,7 +619,8 @@ Kembalikan HANYA format JSON valid persis seperti ini (tanpa markdown \`\`\`json
     "tempatTglLahir": "Tempat dan tanggal lahir lengkap jika tertera",
     "pendidikan": "Pendidikan jika tertera",
     "alamat": "Alamat tempat tinggal jika tertera",
-    "tujuanPemeriksaan": "Posisi / jabatan jika tertera"
+    "tujuanPemeriksaan": "Posisi / jabatan jika tertera",
+    "namaPT": "Nama PT / perusahaan / instansi / organisasi tempat tes atau melamar jika tertera (misal: 'PT. PAMITRA JAYA KONSTRUKSI', 'PT XYZ'). Jika tidak ada, isi string kosong \"\""
   },
   "sikapKerja": {
     "kecepatan": 2,
@@ -672,6 +674,26 @@ Nilai kecepatan, ketelitian, ketekunan, dayaTahanStres WAJIB berupa angka intege
       return !isNaN(num) && num >= 1 && num <= 7 ? num : 4;
     };
 
+    let extractedPT = String(
+      parsed?.clientData?.namaPT ||
+      parsed?.clientData?.nama_pt ||
+      parsed?.clientData?.perusahaan ||
+      parsed?.clientData?.pt ||
+      ''
+    ).trim();
+
+    if (!extractedPT && text) {
+      const explicitMatch = text.match(/(?:Nama\s+Perusahaan|Perusahaan|Company|Instansi|Organisasi)\s*[:]\s*([^\n\r]+)/i);
+      if (explicitMatch && explicitMatch[1]) {
+        extractedPT = explicitMatch[1].trim().replace(/^[:\-\s]+/, '');
+      } else {
+        const ptMatch = text.match(/\b((?:PT\.?|CV\.?)\s+[A-Z0-9\.\,\&\-\s]{3,60})\b/);
+        if (ptMatch && ptMatch[1]) {
+          extractedPT = ptMatch[1].trim().replace(/\s{2,}/g, ' ');
+        }
+      }
+    }
+
     const sK = parsed?.sikapKerja || parsed?.sikap_kerja || parsed || {};
     const normalizedResponse = {
       clientData: {
@@ -679,7 +701,8 @@ Nilai kecepatan, ketelitian, ketekunan, dayaTahanStres WAJIB berupa angka intege
         tempatTglLahir: parsed?.clientData?.tempatTglLahir || '',
         pendidikan: parsed?.clientData?.pendidikan || '',
         alamat: parsed?.clientData?.alamat || '',
-        tujuanPemeriksaan: parsed?.clientData?.tujuanPemeriksaan || ''
+        tujuanPemeriksaan: parsed?.clientData?.tujuanPemeriksaan || '',
+        namaPT: extractedPT
       },
       sikapKerja: {
         kecepatan: parseLevel(sK.kecepatan ?? sK.panker ?? sK.kecepatanKerja),
@@ -715,7 +738,8 @@ Kembalikan HANYA format JSON valid persis seperti ini (tanpa markdown \`\`\`json
     "nama": "Nama peserta (jika ada)",
     "tempatTglLahir": "Ekstrak SECARA LENGKAP nama kota tempat lahir DAN tanggal lahirnya (Contoh format: 'Jakarta, 1 Januari 1990'). Jangan hanya tanggalnya saja.",
     "pendidikan": "Pendidikan peserta (jika ada)",
-    "tujuanPemeriksaan": "Jabatan/posisi (jika ada)"
+    "tujuanPemeriksaan": "Jabatan/posisi (jika ada)",
+    "namaPT": "Nama PT / perusahaan jika tertera (jika ada)"
   },
   "kepribadian": {
     "kematanganEmosi": 0,
@@ -772,7 +796,8 @@ Kembalikan HANYA format JSON valid persis seperti ini (tanpa markdown \`\`\`json
     "nama": "Nama peserta (jika ada)",
     "tempatTglLahir": "Ekstrak SECARA LENGKAP nama kota tempat lahir DAN tanggal lahirnya (Contoh format: 'Jakarta, 1 Januari 1990'). Jangan hanya tanggalnya saja.",
     "pendidikan": "Pendidikan peserta (jika ada)",
-    "tujuanPemeriksaan": "Jabatan/posisi (jika ada)"
+    "tujuanPemeriksaan": "Jabatan/posisi (jika ada)",
+    "namaPT": "Nama PT / perusahaan jika tertera (jika ada)"
   },
   "kepribadian": {
     "kematanganEmosi": 0,

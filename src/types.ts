@@ -130,6 +130,7 @@ export interface StaffClientData {
   jenisKelamin: 'Laki-laki' | 'Perempuan' | '';
   tujuanPemeriksaan: string;
   tanggalTes: string;
+  namaPT: string;
 }
 
 export interface StaffIntelektual {
@@ -201,6 +202,7 @@ export const INITIAL_STAFF_STATE: StaffAppState = {
     jenisKelamin: '',
     tujuanPemeriksaan: '',
     tanggalTes: '',
+    namaPT: '',
   },
   iqScore: '',
   iqLabel: '',
