@@ -576,37 +576,94 @@ apiRouter.post("/extract-kraepelin", async (req, res) => {
       return res.status(400).json({ error: 'Data file atau teks dokumen tidak ditemukan' });
     }
     
-    const prompt = `Ekstrak data hasil tes Kraepelin dan biodata dari dokumen ini. Kembalikan HANYA format JSON valid persis seperti ini (tanpa markdown \`\`\`json):
+    const prompt = `Anda adalah seorang psikolog dan ahli psikometri profesional yang sangat teliti dalam membaca hasil tes psikotes Kraepelin / Pauli / Sikap Kerja.
+Tugas Anda adalah mengekstrak data biodata peserta dan nilai 4 dimensi Sikap Kerja dari dokumen yang diberikan (berupa gambar tabel, grafik kurva kerja Kraepelin, lembar skoring, laporan psikotes, atau teks).
+
+=== DIMENSI SIKAP KERJA YANG HARUS DIEKSTRAK ===
+Ada 4 dimensi Sikap Kerja yang wajib diekstrak ke dalam skala 1 sampai 7:
+1. Kecepatan (Kecepatan Kerja / Tempo Kerja / Panker)
+   - Alias/Label: "Panker", "Kecepatan", "Kecepatan Kerja", "Tempo Kerja", "Speed of Work", "Kuantitas", "Kalkulasi", "Output Kerja".
+2. Ketelitian (Ketelitian Kerja / Keakuratan / Tianker)
+   - Alias/Label: "Tianker", "Ketelitian", "Ketelitian Kerja", "Keakuratan", "Akurasi", "Accuracy", "Kesalahan & Lompatan", "Error (f)", "Kualitas Kerja".
+   - Catatan: Semakin sedikit kesalahan/lompatan atau semakin tinggi kategori ketelitiannya, nilainya semakin tinggi.
+3. Ketekunan (Ketekunan / Keuletan / Kestabilan Kerja / Janker)
+   - Alias/Label: "Janker", "Ketekunan", "Keuletan", "Ketekunan / Keuletan", "Kestabilan Kerja", "Stabilitas", "Keajegan Kerja", "Konsistensi", "Ritme Kerja", "Endurance".
+4. Daya Tahan terhadap Stres (Ketahanan Stres / Hanker)
+   - Alias/Label: "Hanker", "Daya Tahan terhadap Stres", "Ketahanan Stres", "Ketahanan terhadap Tekanan", "Ketahanan Kerja", "Daya Tahan Kerja", "Stress Tolerance", "Gejolak Emosi", "Puncak Kerja".
+
+=== ATURAN PEMETAAN KE SKALA 7 TARAF (1-7) ===
+Hasil psikogram menggunakan skala 7 taraf standar:
+1 = Kurang Sekali (KS)
+2 = Kurang (K)
+3 = Rata-rata Bawah (RB)
+4 = Rata-rata (R) / Sedang (S) / Cukup (C)
+5 = Rata-rata Atas (RA)
+6 = Baik (B) / Tinggi (T)
+7 = Baik Sekali (BS) / Sangat Tinggi (ST)
+
+Aturan membaca dokumen:
+A. JIKA BERUPA TABEL DENGAN TANDA CENTANG (V, ✓, ✔, X, x, dot ●, arsir/highlight, atau angka):
+   - Periksa posisi tanda centang pada kolom tabel untuk setiap baris aspek (Panker, Tianker, Janker, Hanker):
+   * Format Tabel 7 Kolom (KS, K, RB, R, RA, B, BS) atau (1, 2, 3, 4, 5, 6, 7):
+     - Kolom KS / 1 / Sangat Rendah = 1
+     - Kolom K / 2 / Rendah = 2
+     - Kolom RB / CB / 3 / Rata-rata Bawah = 3
+     - Kolom R / S / C / 4 / Rata-rata / Sedang / Cukup = 4
+     - Kolom RA / CA / 5 / Rata-rata Atas = 5
+     - Kolom B / T / 6 / Baik / Tinggi = 6
+     - Kolom BS / ST / 7 / Baik Sekali / Sangat Tinggi = 7
+   * Format Tabel 5 Kolom (KS, K, S/C, B, BS) atau (Kurang Sekali, Kurang, Sedang, Baik, Baik Sekali):
+     - Kolom Kurang Sekali (KS / Sangat Rendah) = 1
+     - Kolom Kurang (K / Rendah) = 2
+     - Kolom Sedang / Cukup / Rata-rata (S / C / R) = 4
+     - Kolom Baik / Tinggi (B / T) = 6
+     - Kolom Baik Sekali / Sangat Tinggi (BS / ST) = 7
+     (Jika tanda berada di batas antara Kurang dan Sedang bernilai 3, jika di antara Sedang dan Baik bernilai 5)
+
+B. JIKA BERUPA TEKS KATEGORI / DESKRIPSI KATA:
+   - "Kurang Sekali" / "Sangat Rendah" / "KS" / "SR" -> 1
+   - "Kurang" / "Rendah" / "K" -> 2
+   - "Rata-rata Bawah" / "Cukup Bawah" / "RB" / "CB" -> 3
+   - "Sedang" / "Rata-rata" / "Cukup" / "S" / "R" / "C" -> 4
+   - "Rata-rata Atas" / "Cukup Atas" / "RA" / "CA" -> 5
+   - "Baik" / "Tinggi" / "B" / "T" -> 6
+   - "Baik Sekali" / "Sangat Tinggi" / "Sangat Baik" / "BS" / "ST" / "SB" -> 7
+
+C. JIKA BERUPA GRAFIK KURVA KRAEPELIN:
+   - Periksa titik puncak (kecepatan maksimal), rata-rata tinggi kurva (Panker), kestabilan garis/fluktuasi naik-turun (Janker), jumlah kesalahan yang ditandai (Tianker), dan penurunan performa di menit-menit akhir (Hanker). Petakan sesuai taraf 1-7.
+
+D. JIKA BERUPA SKOR ANGKA:
+   - Skala 1-7: gunakan langsung (1 sampai 7).
+   - Skala 1-5: 1->1, 2->2, 3->4, 4->6, 5->7.
+   - Standard Wert (SW 0-20): <=3->1, 4-5->2, 6-7->3, 8-11->4, 12-13->5, 14-15->6, >=16->7.
+   - Stanine (1-9): 1->1, 2-3->2, 4->3, 5->4, 6->5, 7-8->6, 9->7.
+
+=== FORMAT OUTPUT JSON WAJIB ===
+Kembalikan HANYA format JSON valid persis seperti ini (tanpa markdown \`\`\`json):
 {
   "clientData": {
-    "nama": "Nama peserta saja tanpa keterangan perusahaannya",
-    "tempatTglLahir": "Ekstrak SECARA LENGKAP nama kota tempat lahir DAN tanggal lahirnya (Contoh format: 'Jakarta, 1 Januari 1990'). Jangan hanya tanggalnya saja.",
-    "pendidikan": "pendidikan peserta",
-    "alamat": "alamat lengkap peserta",
-    "tujuanPemeriksaan": "posisi peserta"
+    "nama": "Nama lengkap peserta (tanpa gelar/perusahaan jika ada)",
+    "tempatTglLahir": "Tempat dan tanggal lahir lengkap (contoh: Jakarta, 12 Mei 1995)",
+    "pendidikan": "Pendidikan terakhir peserta",
+    "alamat": "Alamat tempat tinggal peserta jika tertera",
+    "tujuanPemeriksaan": "Posisi / jabatan / tujuan tes"
   },
   "sikapKerja": {
-    "kecepatan": 0,
-    "ketelitian": 0,
-    "ketekunan": 0,
-    "dayaTahanStres": 0
+    "kecepatan": 4,
+    "ketelitian": 4,
+    "ketekunan": 4,
+    "dayaTahanStres": 4
+  },
+  "rawDetails": {
+    "kecepatan": "Penjelasan singkat temuan (misal: Panker = 12 / centang di kolom Baik)",
+    "ketelitian": "Penjelasan singkat temuan (misal: Tianker = Sedang / centang di kolom Cukup)",
+    "ketekunan": "Penjelasan singkat temuan (misal: Janker = Baik / ritme stabil)",
+    "dayaTahanStres": "Penjelasan singkat temuan (misal: Hanker = Baik Sekali / kurva tahan lelah)"
   }
 }
 
-Aturan ekstraksi Sikap Kerja dari centang (V) di tabel KRAEPLIN:
-- Kolom "Kurang Sekali" = 1
-- Kolom "Kurang" = 2
-- Kolom "Sedang" = 4
-- Kolom "Baik" = 6
-- Kolom "Baik Sekali" = 7
-
-Pemetaan baris tabel KRAEPLIN:
-- Panker = kecepatan
-- Tianker = ketelitian
-- Janker = ketekunan
-- Hanker = dayaTahanStres
-
-Jika data biodata tidak ditemukan, set string menjadi "". Jika data sikap kerja tidak ditemukan, set angka menjadi 0.`;
+Jika data biodata tidak ditemukan, gunakan string kosong "".
+Jika nilai aspek sikap kerja tidak ditemukan atau tidak jelas, berikan estimasi terbaik berdasarkan data yang tampak, atau nilai default 4 (Rata-rata). Nilai kecepatan, ketelitian, ketekunan, dayaTahanStres WAJIB berupa angka integer 1 sampai 7.`;
 
     const parsed = await callUnifiedAI({
       req,
@@ -617,7 +674,51 @@ Jika data biodata tidak ditemukan, set string menjadi "". Jika data sikap kerja 
       fallback: {}
     });
 
-    res.json(parsed);
+    // Helper to safely parse level to 1-7
+    const parseLevel = (val: any) => {
+      if (typeof val === 'number') {
+        if (val >= 1 && val <= 7) return Math.round(val);
+        if (val >= 16) return 7;
+        if (val >= 14) return 6;
+        if (val >= 12) return 5;
+        if (val >= 8) return 4;
+        if (val >= 6) return 3;
+        if (val >= 4) return 2;
+        if (val >= 1) return 1;
+        return 4;
+      }
+      const s = String(val || '').trim().toLowerCase();
+      if (!s) return 4;
+      if (/\b(sangat tinggi|baik sekali|sangat baik|bs|st|sb)\b/i.test(s)) return 7;
+      if (/\b(kurang sekali|sangat rendah|ks|sr)\b/i.test(s)) return 1;
+      if (/\b(rata[- ]*rata bawah|cukup bawah|rb|cb)\b/i.test(s)) return 3;
+      if (/\b(rata[- ]*rata atas|cukup atas|ra|ca)\b/i.test(s)) return 5;
+      if (/\b(baik|tinggi|\bb\b|\bt\b)\b/i.test(s)) return 6;
+      if (/\b(kurang|rendah|\bk\b)\b/i.test(s)) return 2;
+      if (/\b(sedang|rata[- ]*rata|cukup|\br\b|\bs\b|\bc\b)\b/i.test(s)) return 4;
+      const num = parseInt(s, 10);
+      return !isNaN(num) && num >= 1 && num <= 7 ? num : 4;
+    };
+
+    const sK = parsed?.sikapKerja || parsed?.sikap_kerja || parsed || {};
+    const normalizedResponse = {
+      clientData: {
+        nama: parsed?.clientData?.nama || '',
+        tempatTglLahir: parsed?.clientData?.tempatTglLahir || '',
+        pendidikan: parsed?.clientData?.pendidikan || '',
+        alamat: parsed?.clientData?.alamat || '',
+        tujuanPemeriksaan: parsed?.clientData?.tujuanPemeriksaan || ''
+      },
+      sikapKerja: {
+        kecepatan: parseLevel(sK.kecepatan ?? sK.panker ?? sK.kecepatanKerja),
+        ketelitian: parseLevel(sK.ketelitian ?? sK.tianker ?? sK.ketelitianKerja),
+        ketekunan: parseLevel(sK.ketekunan ?? sK.janker ?? sK.ketekunanKerja ?? sK.keuletan),
+        dayaTahanStres: parseLevel(sK.dayaTahanStres ?? sK.hanker ?? sK.dayaTahan ?? sK.ketahananStres)
+      },
+      rawDetails: parsed?.rawDetails || parsed?.raw_details || {}
+    };
+
+    res.json(normalizedResponse);
   } catch (error: any) {
     console.error('Error parsing Kraepelin:', error);
     res.status(500).json({ error: error?.message || 'Gagal mengekstrak data Kraepelin' });

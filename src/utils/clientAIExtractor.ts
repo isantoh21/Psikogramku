@@ -137,6 +137,13 @@ export async function callDirectAI({
             file_data: `data:application/pdf;base64,${data}`
           }
         });
+      } else if (settings.provider === 'koboillm' || (model && model.toLowerCase().includes('gemini'))) {
+        userContent.push({
+          type: 'image_url',
+          image_url: {
+            url: `data:application/pdf;base64,${data}`
+          }
+        });
       }
     }
   }
@@ -217,37 +224,210 @@ CATATAN PENTING:
 2. Untuk subtes IST (SE, WA, AN, GE, ME, RA, ZR, FA, WU): ambil nilai Standard Wert (SW) atau nilai skor tertera untuk masing-masing subtes jika ada.
 3. Jika data tertentu tidak ditemukan, beri nilai null atau string kosong "".`;
 
-export const KRAEPELIN_PROMPT = `Ekstrak data hasil tes Kraepelin dan biodata dari dokumen ini. Kembalikan HANYA format JSON valid persis seperti ini (tanpa markdown \`\`\`json):
+export const KRAEPELIN_PROMPT = `Anda adalah seorang psikolog dan ahli psikometri profesional yang sangat teliti dalam membaca hasil tes psikotes Kraepelin / Pauli / Sikap Kerja.
+Tugas Anda adalah mengekstrak data biodata peserta dan nilai 4 dimensi Sikap Kerja dari dokumen yang diberikan (berupa gambar tabel, grafik kurva kerja Kraepelin, lembar skoring, laporan psikotes, atau teks).
+
+=== DIMENSI SIKAP KERJA YANG HARUS DIEKSTRAK ===
+Ada 4 dimensi Sikap Kerja yang wajib diekstrak ke dalam skala 1 sampai 7:
+1. Kecepatan (Kecepatan Kerja / Tempo Kerja / Panker)
+   - Alias/Label: "Panker", "Kecepatan", "Kecepatan Kerja", "Tempo Kerja", "Speed of Work", "Kuantitas", "Kalkulasi", "Output Kerja".
+2. Ketelitian (Ketelitian Kerja / Keakuratan / Tianker)
+   - Alias/Label: "Tianker", "Ketelitian", "Ketelitian Kerja", "Keakuratan", "Akurasi", "Accuracy", "Kesalahan & Lompatan", "Error (f)", "Kualitas Kerja".
+   - Catatan: Semakin sedikit kesalahan/lompatan atau semakin tinggi kategori ketelitiannya, nilainya semakin tinggi.
+3. Ketekunan (Ketekunan / Keuletan / Kestabilan Kerja / Janker)
+   - Alias/Label: "Janker", "Ketekunan", "Keuletan", "Ketekunan / Keuletan", "Kestabilan Kerja", "Stabilitas", "Keajegan Kerja", "Konsistensi", "Ritme Kerja", "Endurance".
+4. Daya Tahan terhadap Stres (Ketahanan Stres / Hanker)
+   - Alias/Label: "Hanker", "Daya Tahan terhadap Stres", "Ketahanan Stres", "Ketahanan terhadap Tekanan", "Ketahanan Kerja", "Daya Tahan Kerja", "Stress Tolerance", "Gejolak Emosi", "Puncak Kerja".
+
+=== ATURAN PEMETAAN KE SKALA 7 TARAF (1-7) ===
+Hasil psikogram menggunakan skala 7 taraf standar:
+1 = Kurang Sekali (KS)
+2 = Kurang (K)
+3 = Rata-rata Bawah (RB)
+4 = Rata-rata (R) / Sedang (S) / Cukup (C)
+5 = Rata-rata Atas (RA)
+6 = Baik (B) / Tinggi (T)
+7 = Baik Sekali (BS) / Sangat Tinggi (ST)
+
+Aturan membaca dokumen:
+A. JIKA BERUPA TABEL DENGAN TANDA CENTANG (V, ✓, ✔, X, x, dot ●, arsir/highlight, atau angka):
+   - Periksa posisi tanda centang pada kolom tabel untuk setiap baris aspek (Panker, Tianker, Janker, Hanker):
+   * Format Tabel 7 Kolom (KS, K, RB, R, RA, B, BS) atau (1, 2, 3, 4, 5, 6, 7):
+     - Kolom KS / 1 / Sangat Rendah = 1
+     - Kolom K / 2 / Rendah = 2
+     - Kolom RB / CB / 3 / Rata-rata Bawah = 3
+     - Kolom R / S / C / 4 / Rata-rata / Sedang / Cukup = 4
+     - Kolom RA / CA / 5 / Rata-rata Atas = 5
+     - Kolom B / T / 6 / Baik / Tinggi = 6
+     - Kolom BS / ST / 7 / Baik Sekali / Sangat Tinggi = 7
+   * Format Tabel 5 Kolom (KS, K, S/C, B, BS) atau (Kurang Sekali, Kurang, Sedang, Baik, Baik Sekali):
+     - Kolom Kurang Sekali (KS / Sangat Rendah) = 1
+     - Kolom Kurang (K / Rendah) = 2
+     - Kolom Sedang / Cukup / Rata-rata (S / C / R) = 4
+     - Kolom Baik / Tinggi (B / T) = 6
+     - Kolom Baik Sekali / Sangat Tinggi (BS / ST) = 7
+     (Jika tanda berada di batas antara Kurang dan Sedang bernilai 3, jika di antara Sedang dan Baik bernilai 5)
+
+B. JIKA BERUPA TEKS KATEGORI / DESKRIPSI KATA:
+   - "Kurang Sekali" / "Sangat Rendah" / "KS" / "SR" -> 1
+   - "Kurang" / "Rendah" / "K" -> 2
+   - "Rata-rata Bawah" / "Cukup Bawah" / "RB" / "CB" -> 3
+   - "Sedang" / "Rata-rata" / "Cukup" / "S" / "R" / "C" -> 4
+   - "Rata-rata Atas" / "Cukup Atas" / "RA" / "CA" -> 5
+   - "Baik" / "Tinggi" / "B" / "T" -> 6
+   - "Baik Sekali" / "Sangat Tinggi" / "Sangat Baik" / "BS" / "ST" / "SB" -> 7
+
+C. JIKA BERUPA GRAFIK KURVA KRAEPELIN:
+   - Periksa titik puncak (kecepatan maksimal), rata-rata tinggi kurva (Panker), kestabilan garis/fluktuasi naik-turun (Janker), jumlah kesalahan yang ditandai (Tianker), dan penurunan performa di menit-menit akhir (Hanker). Petakan sesuai taraf 1-7.
+
+D. JIKA BERUPA SKOR ANGKA:
+   - Skala 1-7: gunakan langsung (1 sampai 7).
+   - Skala 1-5: 1->1, 2->2, 3->4, 4->6, 5->7.
+   - Standard Wert (SW 0-20): <=3->1, 4-5->2, 6-7->3, 8-11->4, 12-13->5, 14-15->6, >=16->7.
+   - Stanine (1-9): 1->1, 2-3->2, 4->3, 5->4, 6->5, 7-8->6, 9->7.
+
+=== FORMAT OUTPUT JSON WAJIB ===
+Kembalikan HANYA format JSON valid persis seperti ini (tanpa markdown \`\`\`json):
 {
   "clientData": {
-    "nama": "Nama peserta saja tanpa keterangan perusahaannya",
-    "tempatTglLahir": "Ekstrak SECARA LENGKAP nama kota tempat lahir DAN tanggal lahirnya (Contoh format: 'Jakarta, 1 Januari 1990'). Jangan hanya tanggalnya saja.",
-    "pendidikan": "pendidikan peserta",
-    "alamat": "alamat lengkap peserta",
-    "tujuanPemeriksaan": "posisi peserta"
+    "nama": "Nama lengkap peserta (tanpa gelar/perusahaan jika ada)",
+    "tempatTglLahir": "Tempat dan tanggal lahir lengkap (contoh: Jakarta, 12 Mei 1995)",
+    "pendidikan": "Pendidikan terakhir peserta",
+    "alamat": "Alamat tempat tinggal peserta jika tertera",
+    "tujuanPemeriksaan": "Posisi / jabatan / tujuan tes"
   },
   "sikapKerja": {
-    "kecepatan": 0,
-    "ketelitian": 0,
-    "ketekunan": 0,
-    "dayaTahanStres": 0
+    "kecepatan": 4,
+    "ketelitian": 4,
+    "ketekunan": 4,
+    "dayaTahanStres": 4
+  },
+  "rawDetails": {
+    "kecepatan": "Penjelasan singkat temuan (misal: Panker = 12 / centang di kolom Baik)",
+    "ketelitian": "Penjelasan singkat temuan (misal: Tianker = Sedang / centang di kolom Cukup)",
+    "ketekunan": "Penjelasan singkat temuan (misal: Janker = Baik / ritme stabil)",
+    "dayaTahanStres": "Penjelasan singkat temuan (misal: Hanker = Baik Sekali / kurva tahan lelah)"
   }
 }
 
-Aturan ekstraksi Sikap Kerja dari centang (V) di tabel KRAEPLIN:
-- Kolom "Kurang Sekali" = 1
-- Kolom "Kurang" = 2
-- Kolom "Sedang" = 4
-- Kolom "Baik" = 6
-- Kolom "Baik Sekali" = 7
+Jika data biodata tidak ditemukan, gunakan string kosong "".
+Jika nilai aspek sikap kerja tidak ditemukan atau tidak jelas, berikan estimasi terbaik berdasarkan data yang tampak, atau nilai default 4 (Rata-rata). Nilai kecepatan, ketelitian, ketekunan, dayaTahanStres WAJIB berupa angka integer 1 sampai 7.`;
 
-Pemetaan baris tabel KRAEPLIN:
-- Panker = kecepatan
-- Tianker = ketelitian
-- Janker = ketekunan
-- Hanker = dayaTahanStres
+export interface NormalizedKraepelinResult {
+  clientData: {
+    nama: string;
+    tempatTglLahir: string;
+    pendidikan: string;
+    alamat: string;
+    tujuanPemeriksaan: string;
+  };
+  sikapKerja: {
+    kecepatan: number;
+    ketelitian: number;
+    ketekunan: number;
+    dayaTahanStres: number;
+  };
+  rawDetails: {
+    kecepatan: string;
+    ketelitian: string;
+    ketekunan: string;
+    dayaTahanStres: string;
+  };
+}
 
-Jika data biodata tidak ditemukan, set string menjadi "". Jika data sikap kerja tidak ditemukan, set angka menjadi 0.`;
+export function parseSikapKerjaLevel(val: any, defaultLevel = 4): number {
+  if (val === undefined || val === null || val === '') return defaultLevel;
+
+  if (typeof val === 'number') {
+    if (val >= 1 && val <= 7) return Math.round(val);
+    if (val === 0) return 0;
+    if (val === 8 || val === 9) return 7;
+    if (val >= 16) return 7;
+    if (val >= 14) return 6;
+    if (val >= 12) return 5;
+    if (val >= 8) return 4;
+    if (val >= 6) return 3;
+    if (val >= 4) return 2;
+    if (val >= 1) return 1;
+    return defaultLevel;
+  }
+
+  if (typeof val === 'object') {
+    const inner = val.level ?? val.taraf ?? val.score ?? val.kategori ?? val.rating ?? val.value;
+    if (inner !== undefined && inner !== val) {
+      return parseSikapKerjaLevel(inner, defaultLevel);
+    }
+  }
+
+  const str = String(val).trim().toLowerCase();
+  if (!str) return defaultLevel;
+
+  const parsedInt = parseInt(str, 10);
+  if (!isNaN(parsedInt) && /^\d+$/.test(str)) {
+    if (parsedInt >= 1 && parsedInt <= 7) return parsedInt;
+  }
+
+  // Indonesian & English psychological category labels
+  if (/\b(sangat tinggi|baik sekali|sangat baik|bs|st|sb|very high|excellent)\b/i.test(str)) return 7;
+  if (/\b(kurang sekali|sangat rendah|ks|sr|very low|poor)\b/i.test(str)) return 1;
+  if (/\b(rata[- ]*rata bawah|cukup bawah|rb|cb|below average)\b/i.test(str)) return 3;
+  if (/\b(rata[- ]*rata atas|cukup atas|ra|ca|above average)\b/i.test(str)) return 5;
+  if (/\b(baik|tinggi|\bb\b|\bt\b|high|good)\b/i.test(str)) return 6;
+  if (/\b(kurang|rendah|\bk\b|low)\b/i.test(str)) return 2;
+  if (/\b(sedang|rata[- ]*rata|cukup|\br\b|\bs\b|\bc\b|average|medium)\b/i.test(str)) return 4;
+
+  if (!isNaN(parsedInt) && parsedInt >= 1 && parsedInt <= 7) return parsedInt;
+  return defaultLevel;
+}
+
+export function normalizeKraepelinResult(data: any): NormalizedKraepelinResult {
+  const safeData = data || {};
+  const cData = safeData.clientData || {};
+  const sKerja = safeData.sikapKerja || safeData.sikap_kerja || safeData.sikap || safeData;
+  const rawD = safeData.rawDetails || safeData.raw_details || safeData.details || {};
+
+  const clientData = {
+    nama: String(cData.nama || safeData.nama || '').trim(),
+    tempatTglLahir: String(cData.tempatTglLahir || cData.ttl || safeData.tempatTglLahir || safeData.ttl || '').trim(),
+    pendidikan: String(cData.pendidikan || safeData.pendidikan || '').trim(),
+    alamat: String(cData.alamat || safeData.alamat || '').trim(),
+    tujuanPemeriksaan: String(cData.tujuanPemeriksaan || cData.posisi || cData.jabatan || safeData.tujuanPemeriksaan || safeData.posisi || '').trim(),
+  };
+
+  // 1. Kecepatan (Panker)
+  const rawKecepatan = sKerja?.kecepatan ?? sKerja?.kecepatanKerja ?? sKerja?.kecepatan_kerja ?? sKerja?.panker ?? sKerja?.tempo ?? sKerja?.speed ?? safeData.kecepatan ?? safeData.panker;
+  const kecepatan = parseSikapKerjaLevel(rawKecepatan, 4);
+
+  // 2. Ketelitian (Tianker)
+  const rawKetelitian = sKerja?.ketelitian ?? sKerja?.ketelitianKerja ?? sKerja?.ketelitian_kerja ?? sKerja?.tianker ?? sKerja?.accuracy ?? sKerja?.akurasi ?? safeData.ketelitian ?? safeData.tianker;
+  const ketelitian = parseSikapKerjaLevel(rawKetelitian, 4);
+
+  // 3. Ketekunan (Janker)
+  const rawKetekunan = sKerja?.ketekunan ?? sKerja?.keuletan ?? sKerja?.ketekunanKerja ?? sKerja?.ketekunan_kerja ?? sKerja?.janker ?? sKerja?.stabilitas ?? sKerja?.keajegan ?? safeData.ketekunan ?? safeData.janker;
+  const ketekunan = parseSikapKerjaLevel(rawKetekunan, 4);
+
+  // 4. Daya Tahan Stres (Hanker)
+  const rawDayaTahanStres = sKerja?.dayaTahanStres ?? sKerja?.dayaTahan ?? sKerja?.daya_tahan_stres ?? sKerja?.ketahananStres ?? sKerja?.ketahananKerja ?? sKerja?.hanker ?? sKerja?.stressTolerance ?? safeData.dayaTahanStres ?? safeData.hanker;
+  const dayaTahanStres = parseSikapKerjaLevel(rawDayaTahanStres, 4);
+
+  const rawDetails = {
+    kecepatan: String(rawD.kecepatan || rawD.panker || (rawKecepatan ? `Terdeteksi: ${rawKecepatan}` : '')).trim(),
+    ketelitian: String(rawD.ketelitian || rawD.tianker || (rawKetelitian ? `Terdeteksi: ${rawKetelitian}` : '')).trim(),
+    ketekunan: String(rawD.ketekunan || rawD.janker || (rawKetekunan ? `Terdeteksi: ${rawKetekunan}` : '')).trim(),
+    dayaTahanStres: String(rawD.dayaTahanStres || rawD.hanker || (rawDayaTahanStres ? `Terdeteksi: ${rawDayaTahanStres}` : '')).trim(),
+  };
+
+  return {
+    clientData,
+    sikapKerja: {
+      kecepatan,
+      ketelitian,
+      ketekunan,
+      dayaTahanStres
+    },
+    rawDetails
+  };
+}
 
 export const PAPI_PROMPT = `Ekstrak data biodata dan hasil tes PAPI Kostick dari dokumen ini. Kamu harus memahami Guide Interpreter PAPI Kostick. Berdasarkan skor dari masing-masing faktor PAPI Kostick (N, G, A, L, P, I, T, V, X, S, B, O, R, D, C, Z, E, K, F, W) yang ada di dokumen, hitung dan petakan ke dalam 9 aspek kepribadian berikut dengan taraf (level) dari 1 sampai 7 (1=Kurang Sekali, 2=Kurang, 3=Rata-rata Bawah, 4=Rata-rata, 5=Rata-rata Atas, 6=Baik, 7=Baik Sekali) sesuai dengan panduan / standar interpretasi psikologi yang berlaku.
 

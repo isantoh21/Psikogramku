@@ -73,7 +73,7 @@ export async function fileToBase64(file: File | Blob): Promise<string> {
 }
 
 /**
- * Extracts text from a PDF document using PDF.js.
+ * Extracts text from a PDF document using PDF.js with 2D layout awareness (preserving table rows and columns).
  */
 export async function extractTextFromPdf(arrayBuffer: ArrayBuffer): Promise<string> {
   try {
@@ -85,11 +85,53 @@ export async function extractTextFromPdf(arrayBuffer: ArrayBuffer): Promise<stri
     for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item: any) => item.str || '')
-        .join(' ');
-      if (pageText.trim()) {
-        fullText += `\n[--- HALAMAN ${pageNum} ---]\n${pageText}\n`;
+      const rawItems = (textContent.items || []).filter((item: any) => item && typeof item.str === 'string' && item.str.trim() !== '');
+
+      if (rawItems.length === 0) continue;
+
+      // Group items into rows based on Y coordinate (PDF.js transform: [scaleX, skewY, skewX, scaleY, transX, transY])
+      const itemsWithCoords = rawItems.map((item: any) => ({
+        str: item.str,
+        x: item.transform ? Number(item.transform[4]) : 0,
+        y: item.transform ? Number(item.transform[5]) : 0
+      }));
+
+      // Sort items by Y descending (top-to-bottom on page)
+      itemsWithCoords.sort((a, b) => b.y - a.y);
+
+      // Cluster items with Y within 4px into the same line
+      const lines: { y: number; items: typeof itemsWithCoords }[] = [];
+      for (const item of itemsWithCoords) {
+        let line = lines.find(l => Math.abs(l.y - item.y) <= 4);
+        if (!line) {
+          line = { y: item.y, items: [] };
+          lines.push(line);
+        }
+        line.items.push(item);
+      }
+
+      // Re-sort lines from top to bottom
+      lines.sort((a, b) => b.y - a.y);
+
+      // Within each line, sort from left to right and join with appropriate spacing
+      const pageLines = lines.map(line => {
+        line.items.sort((a, b) => a.x - b.x);
+        let lineStr = '';
+        let lastX = -1;
+        for (const item of line.items) {
+          if (lastX >= 0) {
+            const gap = item.x - lastX;
+            if (gap > 20) lineStr += '\t';
+            else lineStr += ' ';
+          }
+          lineStr += item.str;
+          lastX = item.x + (item.str.length * 5);
+        }
+        return lineStr.trim();
+      }).filter(Boolean);
+
+      if (pageLines.length > 0) {
+        fullText += `\n[--- HALAMAN ${pageNum} ---]\n` + pageLines.join('\n') + '\n';
       }
     }
     
@@ -101,37 +143,86 @@ export async function extractTextFromPdf(arrayBuffer: ArrayBuffer): Promise<stri
 }
 
 /**
- * Renders the first page of a scanned PDF to a compressed JPEG image.
- * This allows OpenAI/KoboiLLM Vision to read scanned PDFs without rejecting the mimeType!
+ * Renders up to maxPages of a PDF into a high-quality composite JPEG image.
+ * This allows multimodal AI vision (Gemini / KoboiLLM / OpenAI / Groq) to accurately inspect
+ * visual tables, checkmarks (V / ✓ / X), dots, and Kraepelin curve graphs across multiple pages.
  */
-export async function renderPdfFirstPageToImage(arrayBuffer: ArrayBuffer): Promise<string | null> {
+export async function renderPdfPagesToImage(arrayBuffer: ArrayBuffer, maxPages = 4): Promise<string | null> {
   try {
     const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) });
     const pdf = await loadingTask.promise;
     if (pdf.numPages === 0) return null;
-    
-    const page = await pdf.getPage(1);
+
+    const pagesToRender = Math.min(pdf.numPages, maxPages);
+
+    if (pagesToRender === 1) {
+      const page = await pdf.getPage(1);
+      const scale = 1.8;
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+      return dataUrl.split(',')[1] || null;
+    }
+
+    // Multiple pages: render each to an offscreen canvas and stack onto a single vertical canvas
+    const renderedPages: { canvas: HTMLCanvasElement; width: number; height: number }[] = [];
     const scale = 1.5;
-    const viewport = page.getViewport({ scale });
-    
-    const canvas = document.createElement('canvas');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-    
-    await page.render({
-      canvasContext: ctx,
-      viewport
-    }).promise;
-    
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    let maxWidth = 0;
+    let totalHeight = 0;
+    const spacing = 16;
+
+    for (let p = 1; p <= pagesToRender; p++) {
+      const page = await pdf.getPage(p);
+      const viewport = page.getViewport({ scale });
+      const pageCanvas = document.createElement('canvas');
+      pageCanvas.width = viewport.width;
+      pageCanvas.height = viewport.height;
+      const pageCtx = pageCanvas.getContext('2d');
+      if (pageCtx) {
+        await page.render({ canvasContext: pageCtx, viewport }).promise;
+        renderedPages.push({ canvas: pageCanvas, width: viewport.width, height: viewport.height });
+        maxWidth = Math.max(maxWidth, viewport.width);
+        totalHeight += viewport.height + (p > 1 ? spacing : 0);
+      }
+    }
+
+    if (renderedPages.length === 0) return null;
+
+    const combinedCanvas = document.createElement('canvas');
+    combinedCanvas.width = maxWidth;
+    combinedCanvas.height = totalHeight;
+    const combinedCtx = combinedCanvas.getContext('2d');
+    if (!combinedCtx) return null;
+
+    combinedCtx.fillStyle = '#e2e8f0';
+    combinedCtx.fillRect(0, 0, maxWidth, totalHeight);
+
+    let currentY = 0;
+    for (let i = 0; i < renderedPages.length; i++) {
+      const { canvas: pCanvas, width: pW, height: pH } = renderedPages[i];
+      const offsetX = Math.round((maxWidth - pW) / 2);
+      combinedCtx.drawImage(pCanvas, offsetX, currentY);
+      currentY += pH + spacing;
+    }
+
+    const dataUrl = combinedCanvas.toDataURL('image/jpeg', 0.85);
     return dataUrl.split(',')[1] || null;
   } catch (err) {
-    console.warn('[PDF.js Page Render Warning]', err);
+    console.warn('[PDF.js Multi-Page Render Warning]', err);
     return null;
   }
+}
+
+/**
+ * Backward compatibility alias for single page render.
+ */
+export async function renderPdfFirstPageToImage(arrayBuffer: ArrayBuffer): Promise<string | null> {
+  return renderPdfPagesToImage(arrayBuffer, 1);
 }
 
 /**
@@ -201,23 +292,23 @@ export async function processDocumentFile(
     result.mimeType = 'application/pdf';
     try {
       const arrayBuffer = await file.arrayBuffer();
-      // Try to extract text first
-      const extractedText = await extractTextFromPdf(arrayBuffer);
       
-      if (extractedText && extractedText.length > 80) {
-        // Digital PDF with rich text! Pass extracted text directly for instant, lightweight extraction
+      // 1. Extract 2D layout-aware text
+      const extractedText = await extractTextFromPdf(arrayBuffer);
+      if (extractedText) {
         result.text = extractedText;
-      } else {
-        // Scanned PDF (image-only): Render first page to JPEG for KoboiLLM/OpenAI Vision
-        const renderedJpgBase64 = await renderPdfFirstPageToImage(arrayBuffer);
-        if (renderedJpgBase64) {
-          result.base64 = renderedJpgBase64;
-          result.mimeType = 'image/jpeg';
-          result.isScannedPdf = true;
-        }
       }
       
-      // If neither text nor render succeeded, fallback to raw base64
+      // 2. ALWAYS render page(s) into JPEG image so Multimodal Vision AI can inspect
+      // checkboxes, tables, tick marks, and graphs with 100% precision!
+      const renderedJpgBase64 = await renderPdfPagesToImage(arrayBuffer, 4);
+      if (renderedJpgBase64) {
+        result.base64 = renderedJpgBase64;
+        result.mimeType = 'image/jpeg';
+        result.isScannedPdf = (!extractedText || extractedText.length < 80);
+      }
+      
+      // If render did not produce base64 and there is no text, fallback to raw base64
       if (!result.text && !result.base64) {
         result.base64 = await fileToBase64(file);
       }

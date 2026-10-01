@@ -16,6 +16,7 @@ import {
   executeExtraction, 
   IST_PROMPT, 
   KRAEPELIN_PROMPT, 
+  normalizeKraepelinResult,
   PAPI_PROMPT, 
   getMBTIPrompt 
 } from '../utils/clientAIExtractor';
@@ -57,6 +58,7 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
   const [dragActiveKraepelin, setDragActiveKraepelin] = useState(false);
   const [dragActivePapi, setDragActivePapi] = useState(false);
   const [dragActiveMbti, setDragActiveMbti] = useState(false);
+  const [kraepelinDetails, setKraepelinDetails] = useState<Record<string, string>>({});
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const kraepelinFileInputRef = useRef<HTMLInputElement>(null);
@@ -430,13 +432,13 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
     setUploadStatus({
       type: 'loading',
       title: 'Mengekstrak Data Tes Kraepelin...',
-      message: `Sedang memproses "${file.name}" via ${aiConfigKraepelin.provider.toUpperCase()} (${aiConfigKraepelin.model || 'AI'}). Mohon tunggu beberapa detik...`
+      message: `Sedang memproses "${file.name}" via ${aiConfigKraepelin.provider.toUpperCase()} (${aiConfigKraepelin.model || 'AI'}). Menganalisis tabel sikap kerja, centang, atau kurva Kraepelin...`
     });
 
     try {
       const processed = await processDocumentFile(file, { uploadToSupabase: true, folder: 'kraepelin' });
       
-      const data = await executeExtraction({
+      const rawData = await executeExtraction({
         apiEndpoint: '/api/extract-kraepelin',
         prompt: KRAEPELIN_PROMPT,
         data: processed.base64,
@@ -446,7 +448,8 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
         supabaseUrl: processed.supabaseUrl
       });
       
-      const { clientData: extractedClientData, sikapKerja } = data || {};
+      const normalized = normalizeKraepelinResult(rawData);
+      const { clientData: extractedClientData, sikapKerja: extractedSikapKerja, rawDetails } = normalized;
 
       setState(prev => {
         const base = prev || INITIAL_STAFF_STATE;
@@ -456,26 +459,38 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
           ...base,
           clientData: {
             ...baseClient,
-            nama: extractedClientData?.nama || baseClient.nama,
-            tempatTglLahir: extractedClientData?.tempatTglLahir || baseClient.tempatTglLahir,
-            pendidikan: extractedClientData?.pendidikan || baseClient.pendidikan,
-            alamat: extractedClientData?.alamat || baseClient.alamat,
-            tujuanPemeriksaan: extractedClientData?.tujuanPemeriksaan || baseClient.tujuanPemeriksaan,
+            nama: extractedClientData.nama || baseClient.nama,
+            tempatTglLahir: extractedClientData.tempatTglLahir || baseClient.tempatTglLahir,
+            pendidikan: extractedClientData.pendidikan || baseClient.pendidikan,
+            alamat: extractedClientData.alamat || baseClient.alamat,
+            tujuanPemeriksaan: extractedClientData.tujuanPemeriksaan || baseClient.tujuanPemeriksaan,
           },
           sikapKerja: {
             ...baseSikapKerja,
-            kecepatan: sikapKerja?.kecepatan || baseSikapKerja.kecepatan,
-            ketelitian: sikapKerja?.ketelitian || baseSikapKerja.ketelitian,
-            ketekunan: sikapKerja?.ketekunan || baseSikapKerja.ketekunan,
-            dayaTahanStres: sikapKerja?.dayaTahanStres || baseSikapKerja.dayaTahanStres,
+            kecepatan: (extractedSikapKerja.kecepatan >= 1 && extractedSikapKerja.kecepatan <= 7) 
+              ? extractedSikapKerja.kecepatan 
+              : baseSikapKerja.kecepatan,
+            ketelitian: (extractedSikapKerja.ketelitian >= 1 && extractedSikapKerja.ketelitian <= 7) 
+              ? extractedSikapKerja.ketelitian 
+              : baseSikapKerja.ketelitian,
+            ketekunan: (extractedSikapKerja.ketekunan >= 1 && extractedSikapKerja.ketekunan <= 7) 
+              ? extractedSikapKerja.ketekunan 
+              : baseSikapKerja.ketekunan,
+            dayaTahanStres: (extractedSikapKerja.dayaTahanStres >= 1 && extractedSikapKerja.dayaTahanStres <= 7) 
+              ? extractedSikapKerja.dayaTahanStres 
+              : baseSikapKerja.dayaTahanStres,
           }
         };
       });
 
+      if (rawDetails) {
+        setKraepelinDetails(rawDetails);
+      }
+
       setUploadStatus({
         type: 'success',
         title: 'Ekstraksi Kraepelin Berhasil!',
-        message: `Data Sikap Kerja dari "${file.name}" berhasil diekstrak dan diisikan ke form.`
+        message: `Hasil Sikap Kerja berhasil diekstrak dengan presisi: Kecepatan = ${getStaffScaleCode(extractedSikapKerja.kecepatan)} (${getStaffScaleFullLabel(extractedSikapKerja.kecepatan)}), Ketelitian = ${getStaffScaleCode(extractedSikapKerja.ketelitian)} (${getStaffScaleFullLabel(extractedSikapKerja.ketelitian)}), Ketekunan = ${getStaffScaleCode(extractedSikapKerja.ketekunan)} (${getStaffScaleFullLabel(extractedSikapKerja.ketekunan)}), Daya Tahan = ${getStaffScaleCode(extractedSikapKerja.dayaTahanStres)} (${getStaffScaleFullLabel(extractedSikapKerja.dayaTahanStres)}).`
       });
     } catch (err: any) {
       console.error('Kraepelin Upload Error:', err);
@@ -1384,8 +1399,11 @@ Paragraf 5 (Kepribadian - Ketaatan & Kemandirian):
 
         {/* Card 3: Sikap Kerja */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex justify-between items-center mb-4 pb-2 border-b">
-            <h3 className="text-lg font-medium text-gray-800">4. Sikap Kerja</h3>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-2 border-b">
+            <div>
+              <h3 className="text-lg font-medium text-gray-800">4. Sikap Kerja</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Rating hasil tes Kraepelin / Pauli (skala 7 taraf: KS, K, RB, R, RA, B, BS)</p>
+            </div>
             <div 
               className={`relative p-1 rounded-xl transition-all ${dragActiveKraepelin ? 'bg-indigo-100 border-2 border-indigo-500 border-dashed scale-105' : 'bg-transparent border-2 border-transparent'}`}
               onDragOver={(e) => { e.preventDefault(); setDragActiveKraepelin(true); }}
@@ -1402,17 +1420,61 @@ Paragraf 5 (Kepribadian - Ketaatan & Kemandirian):
               <button 
                 onClick={() => kraepelinFileInputRef.current?.click()}
                 disabled={isUploadingKraepelin}
-                className="flex items-center text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-70"
+                className="flex items-center text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-3.5 py-2 rounded-lg transition-colors disabled:opacity-70 shadow-sm"
               >
                 {isUploadingKraepelin ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-                Upload Data Kraepelin
+                Upload Data Kraepelin (PDF/Gambar)
               </button>
             </div>
           </div>
-          {renderRadioGroup('sikapKerja', 'kecepatan', '1. Kecepatan')}
-          {renderRadioGroup('sikapKerja', 'ketelitian', '2. Ketelitian')}
-          {renderRadioGroup('sikapKerja', 'ketekunan', '3. Ketekunan atau Keuletan')}
-          {renderRadioGroup('sikapKerja', 'dayaTahanStres', '4. Daya Tahan terhadap Stres')}
+
+          <div className="bg-emerald-50/70 border border-emerald-100 rounded-lg p-3.5 mb-5 flex items-start gap-2.5 text-xs text-emerald-950">
+            <Info className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+            <div className="space-y-1 leading-relaxed">
+              <p className="font-semibold text-emerald-950">Panduan Aspek Tes Kraepelin & Pemetaan Taraf:</p>
+              <p>• <span className="font-semibold">Kecepatan (Panker):</span> Mengukur tempo kerja & kuantitas kalkulasi penjumlahan.</p>
+              <p>• <span className="font-semibold">Ketelitian (Tianker):</span> Mengukur keakuratan kerja & kontrol kesalahan/lompatan.</p>
+              <p>• <span className="font-semibold">Ketekunan (Janker):</span> Mengukur kestabilan konsistensi ritme kerja & keuletan terhadap tugas rutin.</p>
+              <p>• <span className="font-semibold">Daya Tahan Stres (Hanker):</span> Mengukur ketahanan performa di bawah tekanan waktu & kelelahan mental.</p>
+            </div>
+          </div>
+
+          {renderRadioGroup(
+            'sikapKerja',
+            'kecepatan',
+            '1. Kecepatan (Panker)',
+            kraepelinDetails.kecepatan 
+              ? { text: `Kraepelin: ${getStaffScaleCode(state.sikapKerja.kecepatan)} (${getStaffScaleFullLabel(state.sikapKerja.kecepatan)})`, variant: 'emerald' }
+              : undefined,
+            kraepelinDetails.kecepatan || 'Kecepatan dalam bekerja dan menyesuaikan diri dengan situasi kerja.'
+          )}
+          {renderRadioGroup(
+            'sikapKerja',
+            'ketelitian',
+            '2. Ketelitian (Tianker)',
+            kraepelinDetails.ketelitian 
+              ? { text: `Kraepelin: ${getStaffScaleCode(state.sikapKerja.ketelitian)} (${getStaffScaleFullLabel(state.sikapKerja.ketelitian)})`, variant: 'emerald' }
+              : undefined,
+            kraepelinDetails.ketelitian || 'Cermat, teliti, dan hati-hati dalam bekerja meminimalkan kesalahan/lompatan.'
+          )}
+          {renderRadioGroup(
+            'sikapKerja',
+            'ketekunan',
+            '3. Ketekunan atau Keuletan (Janker)',
+            kraepelinDetails.ketekunan 
+              ? { text: `Kraepelin: ${getStaffScaleCode(state.sikapKerja.ketekunan)} (${getStaffScaleFullLabel(state.sikapKerja.ketekunan)})`, variant: 'emerald' }
+              : undefined,
+            kraepelinDetails.ketekunan || 'Sabar dan tahan dengan tugas rutin serta tidak mudah bosan/jenuh.'
+          )}
+          {renderRadioGroup(
+            'sikapKerja',
+            'dayaTahanStres',
+            '4. Daya Tahan terhadap Stres (Hanker)',
+            kraepelinDetails.dayaTahanStres 
+              ? { text: `Kraepelin: ${getStaffScaleCode(state.sikapKerja.dayaTahanStres)} (${getStaffScaleFullLabel(state.sikapKerja.dayaTahanStres)})`, variant: 'emerald' }
+              : undefined,
+            kraepelinDetails.dayaTahanStres || 'Kemampuan menghasilkan performance kerja yang stabil dalam situasi penuh tekanan.'
+          )}
         </div>
 
         {/* Card 4: Kepribadian */}
