@@ -20,10 +20,10 @@ export function cleanJsonOutput(rawText: string, fallback: any = {}) {
  */
 export function canExecuteDirectly(settings?: AISettings): boolean {
   const s = settings || getAISettings();
-  if (!s) return false;
-  // If user entered an API key, browser can call the AI provider directly!
-  if (s.apiKey && s.apiKey.trim() !== '' && s.apiKey !== 'sk-1wbq_Yt3lZPxwkDRXZYQow') return true;
+  if (!s) return true;
+  if (s.provider === 'koboillm') return true;
   if (s.provider === 'custom' && !!s.baseUrl && !!s.apiKey) return true;
+  if (s.apiKey && s.apiKey.trim() !== '') return true;
   return false;
 }
 
@@ -99,10 +99,11 @@ export async function callDirectAI({
     model = model || 'llama-3.3-70b-versatile';
   } else if (settings.provider === 'koboillm') {
     baseUrl = baseUrl || 'https://api.koboillm.com/v1';
-    model = model || 'gemini/gemini-2.5-flash';
+    apiKey = apiKey || 'sk-wMaVBOWC1G69emLkQ5T9Ng';
+    model = model || 'gemini/gemini-3.1-flash-lite';
   } else if (settings.provider === 'custom') {
     baseUrl = baseUrl || 'https://api.openai.com/v1';
-    model = model || 'gemini/gemini-2.5-flash';
+    model = model || 'gemini/gemini-3.1-flash-lite';
   }
 
   if (!apiKey) {

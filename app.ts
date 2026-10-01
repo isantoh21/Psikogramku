@@ -198,7 +198,7 @@ export async function callUnifiedAI({
     const defaultUrl = provider === 'koboillm' ? 'https://api.koboillm.com/v1' : 'https://api.openai.com/v1';
     const effectiveBase = baseUrlHeader || defaultUrl;
     endpoint = `${effectiveBase.replace(/\/$/, '')}/chat/completions`;
-    apiKey = apiKey || (provider === 'koboillm' ? 'sk-1wbq_Yt3lZPxwkDRXZYQow' : '');
+    apiKey = apiKey || (provider === 'koboillm' ? (process.env.KOBOILLM_API_KEY || 'sk-wMaVBOWC1G69emLkQ5T9Ng') : '');
     
     if (!model || model === 'auto') {
       // Auto fetch model if model is empty or 'auto'
@@ -219,7 +219,7 @@ export async function callUnifiedAI({
         console.warn('Auto fetch model failed in server:', e);
       }
     }
-    model = model || 'gemini/gemini-2.5-flash';
+    model = model || 'gemini/gemini-3.1-flash-lite';
     if (!apiKey) {
       throw new Error(`API Key untuk ${provider} belum diisi.`);
     }

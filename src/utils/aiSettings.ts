@@ -24,10 +24,10 @@ export const PROVIDER_OPTIONS: {
   {
     id: 'koboillm',
     name: 'KoboiLLM (Custom Provider)',
-    description: 'Endpoint Koboillm API v1 (gemini/gemini-2.5-flash, Context: 1.05M, Supports Vision).',
-    defaultModel: 'gemini/gemini-2.5-flash',
+    description: 'Endpoint Koboillm API v1 (gemini/gemini-3.1-flash-lite, Context: 1.05M, Supports Vision).',
+    defaultModel: 'gemini/gemini-3.1-flash-lite',
     defaultBaseUrl: 'https://api.koboillm.com/v1',
-    placeholderKey: 'sk-1wbq...',
+    placeholderKey: 'sk-wMaV...',
     defaultContextLength: 1050000,
     supportsVision: true
   },
@@ -35,7 +35,7 @@ export const PROVIDER_OPTIONS: {
     id: 'custom',
     name: 'Custom OpenAI-Compatible',
     description: 'Gunakan endpoint API pihak ketiga lainnya (Ollama, Together, Mistral, dll).',
-    defaultModel: 'gemini/gemini-2.5-flash',
+    defaultModel: 'gemini/gemini-3.1-flash-lite',
     defaultBaseUrl: 'https://api.koboillm.com/v1',
     placeholderKey: 'API Key...',
     defaultContextLength: 1050000,
@@ -72,10 +72,10 @@ export const PROVIDER_OPTIONS: {
 ];
 
 export const DEFAULT_AI_SETTINGS: AISettings = {
-  provider: 'gemini',
-  apiKey: '',
-  model: 'gemini-2.5-flash-lite',
-  baseUrl: '',
+  provider: 'koboillm',
+  apiKey: 'sk-wMaVBOWC1G69emLkQ5T9Ng',
+  model: 'gemini/gemini-3.1-flash-lite',
+  baseUrl: 'https://api.koboillm.com/v1',
   contextLength: 1050000,
   supportsVision: true
 };
@@ -85,9 +85,21 @@ export function getAISettings(): AISettings {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      // If user had legacy expired koboillm default or dead key, reset to clean default
-      if (parsed.provider === 'koboillm' && (!parsed.apiKey || parsed.apiKey === 'sk-1wbq_Yt3lZPxwkDRXZYQow')) {
-        return { ...DEFAULT_AI_SETTINGS };
+      // Auto-update legacy expired key to the new active KoboiLLM key
+      if (
+        !parsed.apiKey || 
+        parsed.apiKey === 'sk-1wbq_Yt3lZPxwkDRXZYQow' || 
+        (parsed.provider === 'koboillm' && (!parsed.apiKey || parsed.apiKey.includes('1wbq')))
+      ) {
+        const updated = {
+          ...parsed,
+          provider: 'koboillm',
+          apiKey: DEFAULT_AI_SETTINGS.apiKey,
+          baseUrl: DEFAULT_AI_SETTINGS.baseUrl,
+          model: DEFAULT_AI_SETTINGS.model
+        };
+        saveAISettings(updated);
+        return updated;
       }
       return { ...DEFAULT_AI_SETTINGS, ...parsed };
     }
