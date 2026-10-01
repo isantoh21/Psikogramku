@@ -227,91 +227,63 @@ CATATAN PENTING:
 export const KRAEPELIN_PROMPT = `Anda adalah seorang psikolog dan ahli psikometri profesional yang sangat teliti dalam membaca hasil tes psikotes Kraepelin / Pauli / Sikap Kerja.
 Tugas Anda adalah mengekstrak data biodata peserta dan nilai 4 dimensi Sikap Kerja dari dokumen yang diberikan (berupa gambar tabel, grafik kurva kerja Kraepelin, lembar skoring, laporan psikotes, atau teks).
 
-=== DIMENSI SIKAP KERJA YANG HARUS DIEKSTRAK ===
-Ada 4 dimensi Sikap Kerja yang wajib diekstrak ke dalam skala 1 sampai 7:
-1. Kecepatan (Kecepatan Kerja / Tempo Kerja / Panker)
-   - Alias/Label: "Panker", "Kecepatan", "Kecepatan Kerja", "Tempo Kerja", "Speed of Work", "Kuantitas", "Kalkulasi", "Output Kerja".
-2. Ketelitian (Ketelitian Kerja / Keakuratan / Tianker)
-   - Alias/Label: "Tianker", "Ketelitian", "Ketelitian Kerja", "Keakuratan", "Akurasi", "Accuracy", "Kesalahan & Lompatan", "Error (f)", "Kualitas Kerja".
-   - Catatan: Semakin sedikit kesalahan/lompatan atau semakin tinggi kategori ketelitiannya, nilainya semakin tinggi.
-3. Ketekunan (Ketekunan / Keuletan / Kestabilan Kerja / Janker)
-   - Alias/Label: "Janker", "Ketekunan", "Keuletan", "Ketekunan / Keuletan", "Kestabilan Kerja", "Stabilitas", "Keajegan Kerja", "Konsistensi", "Ritme Kerja", "Endurance".
-4. Daya Tahan terhadap Stres (Ketahanan Stres / Hanker)
-   - Alias/Label: "Hanker", "Daya Tahan terhadap Stres", "Ketahanan Stres", "Ketahanan terhadap Tekanan", "Ketahanan Kerja", "Daya Tahan Kerja", "Stress Tolerance", "Gejolak Emosi", "Puncak Kerja".
+=== PERINGATAN KRUSIAL: BACA HEADER KOLOM TABEL SECARA VERTIKAL DENGAN TELITI ===
+JANGAN PERNAH MENGASUMSIKAN URUTAN KOLOM DARI KIRI KE KANAN!
+Banyak tabel Kraepelin di Indonesia menyusun kolom dalam urutan TERBALIK:
+Urutan 1 (Tinggi di Kiri): [Aspek] | Baik Sekali | Baik | Sedang | Kurang | Kurang Sekali
+Urutan 2 (Rendah di Kiri): [Aspek] | Kurang Sekali | Kurang | Sedang | Baik | Baik Sekali
+Urutan 3 (7 Kolom): [Aspek] | KS | K | RB | R | RA | B | BS (atau sebaliknya BS sampai KS)
 
-=== ATURAN PEMETAAN KE SKALA 7 TARAF (1-7) ===
-Hasil psikogram menggunakan skala 7 taraf standar:
-1 = Kurang Sekali (KS)
-2 = Kurang (K)
-3 = Rata-rata Bawah (RB)
-4 = Rata-rata (R) / Sedang (S) / Cukup (C)
-5 = Rata-rata Atas (RA)
-6 = Baik (B) / Tinggi (T)
-7 = Baik Sekali (BS) / Sangat Tinggi (ST)
+ATURAN WAJIB UNTUK MENENTUKAN NILAI SETIAP ASPEK:
+1. Temukan baris untuk setiap aspek:
+   - Panker = Kecepatan (kecepatan)
+   - Tianker = Ketelitian (ketelitian)
+   - Janker = Ketekunan / Keuletan (ketekunan)
+   - Hanker = Daya Tahan terhadap Stres (dayaTahanStres)
+2. Pada baris aspek tersebut, cari di mana tanda centang (V / ✓ / X / dot ●) berada.
+3. Tarik garis lurus vertikal dari tanda centang tersebut lurus ke atas sampai ke baris JUDUL HEADER KOLOM di atasnya.
+4. BACA TEKS JUDUL HEADER KOLOM TERSEBUT SECARA LANGSUNG, lalu petakan ke nilai 1-7 berikut:
+   - Header "Kurang Sekali" / "KS" / "Sangat Rendah" -> Nilai = 1 (KS)
+   - Header "Kurang" / "K" / "Rendah" -> Nilai = 2 (K)
+   - Header "Rata-rata Bawah" / "RB" / "Cukup Bawah" -> Nilai = 3 (RB)
+   - Header "Sedang" / "Cukup" / "Rata-rata" / "R" / "S" / "C" -> Nilai = 4 (R)
+   - Header "Rata-rata Atas" / "RA" / "Cukup Atas" -> Nilai = 5 (RA)
+   - Header "Baik" / "B" / "Tinggi" -> Nilai = 6 (B)
+   - Header "Baik Sekali" / "BS" / "Sangat Tinggi" -> Nilai = 7 (BS)
 
-Aturan membaca dokumen:
-A. JIKA BERUPA TABEL DENGAN TANDA CENTANG (V, ✓, ✔, X, x, dot ●, arsir/highlight, atau angka):
-   - Periksa posisi tanda centang pada kolom tabel untuk setiap baris aspek (Panker, Tianker, Janker, Hanker):
-   * Format Tabel 7 Kolom (KS, K, RB, R, RA, B, BS) atau (1, 2, 3, 4, 5, 6, 7):
-     - Kolom KS / 1 / Sangat Rendah = 1
-     - Kolom K / 2 / Rendah = 2
-     - Kolom RB / CB / 3 / Rata-rata Bawah = 3
-     - Kolom R / S / C / 4 / Rata-rata / Sedang / Cukup = 4
-     - Kolom RA / CA / 5 / Rata-rata Atas = 5
-     - Kolom B / T / 6 / Baik / Tinggi = 6
-     - Kolom BS / ST / 7 / Baik Sekali / Sangat Tinggi = 7
-   * Format Tabel 5 Kolom (KS, K, S/C, B, BS) atau (Kurang Sekali, Kurang, Sedang, Baik, Baik Sekali):
-     - Kolom Kurang Sekali (KS / Sangat Rendah) = 1
-     - Kolom Kurang (K / Rendah) = 2
-     - Kolom Sedang / Cukup / Rata-rata (S / C / R) = 4
-     - Kolom Baik / Tinggi (B / T) = 6
-     - Kolom Baik Sekali / Sangat Tinggi (BS / ST) = 7
-     (Jika tanda berada di batas antara Kurang dan Sedang bernilai 3, jika di antara Sedang dan Baik bernilai 5)
-
-B. JIKA BERUPA TEKS KATEGORI / DESKRIPSI KATA:
-   - "Kurang Sekali" / "Sangat Rendah" / "KS" / "SR" -> 1
-   - "Kurang" / "Rendah" / "K" -> 2
-   - "Rata-rata Bawah" / "Cukup Bawah" / "RB" / "CB" -> 3
-   - "Sedang" / "Rata-rata" / "Cukup" / "S" / "R" / "C" -> 4
-   - "Rata-rata Atas" / "Cukup Atas" / "RA" / "CA" -> 5
-   - "Baik" / "Tinggi" / "B" / "T" -> 6
-   - "Baik Sekali" / "Sangat Tinggi" / "Sangat Baik" / "BS" / "ST" / "SB" -> 7
-
-C. JIKA BERUPA GRAFIK KURVA KRAEPELIN:
-   - Periksa titik puncak (kecepatan maksimal), rata-rata tinggi kurva (Panker), kestabilan garis/fluktuasi naik-turun (Janker), jumlah kesalahan yang ditandai (Tianker), dan penurunan performa di menit-menit akhir (Hanker). Petakan sesuai taraf 1-7.
-
-D. JIKA BERUPA SKOR ANGKA:
-   - Skala 1-7: gunakan langsung (1 sampai 7).
-   - Skala 1-5: 1->1, 2->2, 3->4, 4->6, 5->7.
-   - Standard Wert (SW 0-20): <=3->1, 4-5->2, 6-7->3, 8-11->4, 12-13->5, 14-15->6, >=16->7.
-   - Stanine (1-9): 1->1, 2-3->2, 4->3, 5->4, 6->5, 7-8->6, 9->7.
+CONTOH NYATA PADA TABEL KRAEPELIN:
+Jika tabel memiliki header: | Baik Sekali | Baik | Sedang | Kurang | Kurang Sekali |
+- Baris Panker bertanda V di kolom 'Kurang' -> kecepatan = 2 (K) (JANGAN set 6!)
+- Baris Tianker bertanda V di kolom 'Kurang Sekali' -> ketelitian = 1 (KS) (JANGAN set 7!)
+- Baris Janker bertanda V di kolom 'Sedang' -> ketekunan = 4 (R)
+- Baris Hanker bertanda V di kolom 'Baik Sekali' -> dayaTahanStres = 7 (BS) (JANGAN set 1!)
 
 === FORMAT OUTPUT JSON WAJIB ===
 Kembalikan HANYA format JSON valid persis seperti ini (tanpa markdown \`\`\`json):
 {
   "clientData": {
-    "nama": "Nama lengkap peserta (tanpa gelar/perusahaan jika ada)",
-    "tempatTglLahir": "Tempat dan tanggal lahir lengkap (contoh: Jakarta, 12 Mei 1995)",
-    "pendidikan": "Pendidikan terakhir peserta",
-    "alamat": "Alamat tempat tinggal peserta jika tertera",
-    "tujuanPemeriksaan": "Posisi / jabatan / tujuan tes"
+    "nama": "Nama lengkap peserta jika tertera",
+    "tempatTglLahir": "Tempat dan tanggal lahir lengkap jika tertera",
+    "pendidikan": "Pendidikan jika tertera",
+    "alamat": "Alamat tempat tinggal jika tertera",
+    "tujuanPemeriksaan": "Posisi / jabatan jika tertera"
   },
   "sikapKerja": {
-    "kecepatan": 4,
-    "ketelitian": 4,
+    "kecepatan": 2,
+    "ketelitian": 1,
     "ketekunan": 4,
-    "dayaTahanStres": 4
+    "dayaTahanStres": 7
   },
   "rawDetails": {
-    "kecepatan": "Penjelasan singkat temuan (misal: Panker = 12 / centang di kolom Baik)",
-    "ketelitian": "Penjelasan singkat temuan (misal: Tianker = Sedang / centang di kolom Cukup)",
-    "ketekunan": "Penjelasan singkat temuan (misal: Janker = Baik / ritme stabil)",
-    "dayaTahanStres": "Penjelasan singkat temuan (misal: Hanker = Baik Sekali / kurva tahan lelah)"
+    "kecepatan": "Panker: tanda V di kolom Kurang (skor 2 / K)",
+    "ketelitian": "Tianker: tanda V di kolom Kurang Sekali (skor 1 / KS)",
+    "ketekunan": "Janker: tanda V di kolom Sedang (skor 4 / R)",
+    "dayaTahanStres": "Hanker: tanda V di kolom Baik Sekali (skor 7 / BS)"
   }
 }
 
 Jika data biodata tidak ditemukan, gunakan string kosong "".
-Jika nilai aspek sikap kerja tidak ditemukan atau tidak jelas, berikan estimasi terbaik berdasarkan data yang tampak, atau nilai default 4 (Rata-rata). Nilai kecepatan, ketelitian, ketekunan, dayaTahanStres WAJIB berupa angka integer 1 sampai 7.`;
+Nilai kecepatan, ketelitian, ketekunan, dayaTahanStres WAJIB berupa angka integer 1 sampai 7.`;
 
 export interface NormalizedKraepelinResult {
   clientData: {
