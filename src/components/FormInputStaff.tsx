@@ -18,7 +18,8 @@ import {
   PAPI_PROMPT, 
   getMBTIPrompt 
 } from '../utils/clientAIExtractor';
-import { RefreshCw, FileText, Copy, Check, Upload, Loader2, Calculator, Info, ChevronDown, ChevronUp, CheckCircle2, AlertCircle, X, Sparkles } from 'lucide-react';
+import { processDocumentFile } from '../utils/documentProcessor';
+import { RefreshCw, FileText, Copy, Check, Upload, Loader2, Calculator, Info, ChevronDown, ChevronUp, CheckCircle2, AlertCircle, X, Sparkles, Cloud } from 'lucide-react';
 
 interface FormInputStaffProps {
   state?: StaffAppState;
@@ -104,14 +105,6 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
   };
 
   const readFileAsBase64 = async (file: File): Promise<{ base64: string; mimeType: string }> => {
-    // Vercel serverless function payload limit is 4.5MB. Base64 encoding adds ~33% overhead.
-    // Raw binary files like PDF must be <= 3.0MB to avoid 413 or FUNCTION_INVOCATION_FAILED.
-    if (file.size > 3.0 * 1024 * 1024 && !file.type.startsWith('image/')) {
-      throw new Error(
-        `Ukuran file (${(file.size / (1024 * 1024)).toFixed(1)}MB) melebihi batas aman upload Vercel (maksimal 3MB untuk file PDF). Harap kompres file PDF terlebih dahulu (misalnya via ilovepdf.com).`
-      );
-    }
-
     const processedBlob = file.type.startsWith('image/') ? await compressImageIfNeeded(file) : file;
 
     return new Promise((resolve, reject) => {
@@ -261,14 +254,16 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
     });
 
     try {
-      const { base64, mimeType } = await readFileAsBase64(file);
+      const processed = await processDocumentFile(file, { uploadToSupabase: true, folder: 'ist' });
       
       const data = await executeExtraction({
         apiEndpoint: '/api/extract-ist',
         prompt: IST_PROMPT,
-        data: base64,
-        mimeType,
-        filename: file.name
+        data: processed.base64,
+        mimeType: processed.mimeType,
+        filename: file.name,
+        text: processed.text,
+        supabaseUrl: processed.supabaseUrl
       });
       
       const {
@@ -411,14 +406,16 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
     });
 
     try {
-      const { base64, mimeType } = await readFileAsBase64(file);
+      const processed = await processDocumentFile(file, { uploadToSupabase: true, folder: 'kraepelin' });
       
       const data = await executeExtraction({
         apiEndpoint: '/api/extract-kraepelin',
         prompt: KRAEPELIN_PROMPT,
-        data: base64,
-        mimeType,
-        filename: file.name
+        data: processed.base64,
+        mimeType: processed.mimeType,
+        filename: file.name,
+        text: processed.text,
+        supabaseUrl: processed.supabaseUrl
       });
       
       const { clientData: extractedClientData, sikapKerja } = data || {};
@@ -478,14 +475,16 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
     });
 
     try {
-      const { base64, mimeType } = await readFileAsBase64(file);
+      const processed = await processDocumentFile(file, { uploadToSupabase: true, folder: 'papi' });
       
       const data = await executeExtraction({
         apiEndpoint: '/api/extract-papikostik',
         prompt: PAPI_PROMPT,
-        data: base64,
-        mimeType,
-        filename: file.name
+        data: processed.base64,
+        mimeType: processed.mimeType,
+        filename: file.name,
+        text: processed.text,
+        supabaseUrl: processed.supabaseUrl
       });
       
       const { clientData: extractedClientData, kepribadian } = data || {};
@@ -550,14 +549,16 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
     });
 
     try {
-      const { base64, mimeType } = await readFileAsBase64(file);
+      const processed = await processDocumentFile(file, { uploadToSupabase: true, folder: 'mbti' });
       
       const data = await executeExtraction({
         apiEndpoint: '/api/extract-mbti',
         prompt: getMBTIPrompt(state?.kepribadian),
-        data: base64,
-        mimeType,
+        data: processed.base64,
+        mimeType: processed.mimeType,
         filename: file.name,
+        text: processed.text,
+        supabaseUrl: processed.supabaseUrl,
         extraBody: {
           currentKepribadian: state?.kepribadian
         }

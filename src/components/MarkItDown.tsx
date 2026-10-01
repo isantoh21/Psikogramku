@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, FileText, Download, Loader2, AlertCircle, Trash2, CheckCircle2, X } from 'lucide-react';
 import JSZip from 'jszip';
+import { processDocumentFile } from '../utils/documentProcessor';
 
 type ConversionResult = {
   filename: string;
@@ -86,18 +87,46 @@ export function MarkItDown() {
       if (contentType && contentType.indexOf("application/json") !== -1) {
         data = await response.json();
       } else {
-        const text = await response.text();
-        throw new Error(response.ok ? 'Format respons tidak valid' : `Gagal mengunggah (Error ${response.status}).`);
+        throw new Error(`Gagal mengunggah ke server (Error ${response.status}).`);
       }
       
       if (!response.ok) {
-        throw new Error(data?.error || 'Terjadi kesalahan saat mengonversi file.');
+        throw new Error(data?.error || 'Terjadi kesalahan saat mengonversi file di server.');
       }
       
       setResults(data.results || []);
       setActiveResultIndex(0);
     } catch (err: any) {
-      setError(err.message);
+      console.warn('Server conversion failed, falling back to browser processing:', err);
+      // Fallback: Process in browser directly using documentProcessor
+      try {
+        const fallbackResults: ConversionResult[] = [];
+        for (const file of files) {
+          try {
+            const doc = await processDocumentFile(file, { uploadToSupabase: true, folder: 'markitdown' });
+            let md = doc.text || '';
+            if (!md && doc.base64) {
+              md = `![${file.name}](data:${doc.mimeType};base64,${doc.base64})`;
+            }
+            fallbackResults.push({
+              filename: file.name,
+              markdown: md || `# ${file.name}\n\n*(Dokumen berhasil diproses)*`,
+              success: true
+            });
+          } catch (fileErr: any) {
+            fallbackResults.push({
+              filename: file.name,
+              markdown: '',
+              success: false,
+              error: fileErr?.message || 'Gagal memproses file'
+            });
+          }
+        }
+        setResults(fallbackResults);
+        setActiveResultIndex(0);
+      } catch (fallbackErr: any) {
+        setError(fallbackErr.message || err.message);
+      }
     } finally {
       setIsConverting(false);
     }

@@ -3,6 +3,7 @@ import { Upload, FileText, Trash2, Loader2, Download, CheckCircle2, AlertCircle,
 import mammoth from 'mammoth';
 import { getAIHeaders, getAISettings } from '../utils/aiSettings';
 import { executeExtraction, canExecuteDirectly, BEI_PROMPT } from '../utils/clientAIExtractor';
+import { processDocumentFile } from '../utils/documentProcessor';
 
 type STAR = { situation: string; task: string; action: string; result: string };
 type BEIState = {
@@ -112,13 +113,7 @@ export function HasilBEI() {
     const filename = file.name;
     const ext = filename.substring(filename.lastIndexOf('.')).toLowerCase();
 
-    // Vercel serverless function payload limit is 4.5MB.
-    // When direct AI (KoboiLLM / OpenAI / etc) is not active, enforce 3MB safe limit.
-    if (!canExecuteDirectly() && file.size > 3.0 * 1024 * 1024 && !file.type.startsWith('image/')) {
-      throw new Error(
-        `Ukuran file (${(file.size / (1024 * 1024)).toFixed(1)}MB) melebihi batas aman upload Vercel (maksimal 3MB untuk mode serverless). Harap beralih ke KoboiLLM / OpenAI di "⚙️ Pengaturan AI" di bagian atas untuk upload langsung tanpa batasan serverless, atau kompres file terlebih dahulu.`
-      );
-    }
+    // Process file with automatic text extraction & Supabase storage
 
     // 1. Text / Markdown / CSV files
     if (ext === '.txt' || ext === '.md' || ext === '.csv' || ext === '.json') {
@@ -207,15 +202,16 @@ export function HasilBEI() {
     const providerName = aiConfig.provider.toUpperCase();
 
     try {
-      const { base64, mimeType, text } = await readFileForBEI(file);
+      const processed = await processDocumentFile(file, { uploadToSupabase: true, folder: 'bei' });
 
       const data = await executeExtraction({
         apiEndpoint: '/api/extract-bei',
         prompt: BEI_PROMPT,
-        data: base64,
-        mimeType,
-        text,
-        filename: file.name
+        data: processed.base64,
+        mimeType: processed.mimeType,
+        text: processed.text,
+        filename: file.name,
+        supabaseUrl: processed.supabaseUrl
       });
 
       const extractedClient = data?.clientData || {};

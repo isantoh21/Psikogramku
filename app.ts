@@ -72,12 +72,14 @@ export async function callUnifiedAI({
   prompt,
   data,
   mimeType,
+  text,
   fallback = {}
 }: {
   req: express.Request;
   prompt: string;
   data?: string; // base64 representation
   mimeType?: string;
+  text?: string; // plain text representation
   fallback?: any;
 }) {
   const providerHeader = (req.headers['x-ai-provider'] as string) || req.body?.aiConfig?.provider;
@@ -100,6 +102,10 @@ export async function callUnifiedAI({
     }
   }
 
+  const effectivePrompt = (text && text.trim())
+    ? `${prompt}\n\n=== BERIKUT TEKS DOKUMEN YANG DIEKSTRAK ===\n${text.trim()}`
+    : prompt;
+
   // 1. Google Gemini Provider (Primary with automatic model fallback cascade)
   if (provider === 'gemini') {
     const apiKey = keyHeader || getGeminiApiKey();
@@ -117,7 +123,7 @@ export async function callUnifiedAI({
       let succeeded = false;
       for (const model of modelsToTry) {
         try {
-          const contents: any[] = [prompt];
+          const contents: any[] = [effectivePrompt];
           if (data && mimeType) {
             contents.push({
               inlineData: {
@@ -221,7 +227,7 @@ export async function callUnifiedAI({
 
   // Construct OpenAI-compatible prompt and multimodal contents
   const userContent: any[] = [
-    { type: 'text', text: `${prompt}\n\nPENTING: Kembalikan HANYA format JSON valid tanpa tanda kutip markdown \`\`\`json.` }
+    { type: 'text', text: `${effectivePrompt}\n\nPENTING: Kembalikan HANYA format JSON valid tanpa tanda kutip markdown \`\`\`json.` }
   ];
 
   if (data && mimeType) {
@@ -433,11 +439,11 @@ apiRouter.post("/fetch-models", async (req, res) => {
 // IST Test extraction
 apiRouter.post("/extract-ist", async (req, res) => {
   try {
-    const { data, filename } = req.body;
+    const { data, filename, text } = req.body;
     const mimeType = normalizeMimeType(req.body.mimeType, filename, data);
     
-    if (!data) {
-      return res.status(400).json({ error: 'Data file tidak ditemukan' });
+    if (!data && !text) {
+      return res.status(400).json({ error: 'Data file atau teks dokumen tidak ditemukan' });
     }
     
     const prompt = `Ekstrak data hasil tes IST (Intelligenz Struktur Test) dan biodata dari dokumen laporan psikotes seleksi staf ini.
@@ -484,6 +490,7 @@ CATATAN PENTING:
       prompt,
       data,
       mimeType,
+      text,
       fallback: {}
     });
 
@@ -497,11 +504,11 @@ CATATAN PENTING:
 // Kraepelin extraction
 apiRouter.post("/extract-kraepelin", async (req, res) => {
   try {
-    const { data, filename } = req.body;
+    const { data, filename, text } = req.body;
     const mimeType = normalizeMimeType(req.body.mimeType, filename, data);
     
-    if (!data) {
-      return res.status(400).json({ error: 'Data file tidak ditemukan' });
+    if (!data && !text) {
+      return res.status(400).json({ error: 'Data file atau teks dokumen tidak ditemukan' });
     }
     
     const prompt = `Ekstrak data hasil tes Kraepelin dan biodata dari dokumen ini. Kembalikan HANYA format JSON valid persis seperti ini (tanpa markdown \`\`\`json):
@@ -541,6 +548,7 @@ Jika data biodata tidak ditemukan, set string menjadi "". Jika data sikap kerja 
       prompt,
       data,
       mimeType,
+      text,
       fallback: {}
     });
 
@@ -554,11 +562,11 @@ Jika data biodata tidak ditemukan, set string menjadi "". Jika data sikap kerja 
 // PAPI Kostick extraction
 apiRouter.post("/extract-papikostik", async (req, res) => {
   try {
-    const { data, filename } = req.body;
+    const { data, filename, text } = req.body;
     const mimeType = normalizeMimeType(req.body.mimeType, filename, data);
     
-    if (!data) {
-      return res.status(400).json({ error: 'Data file tidak ditemukan' });
+    if (!data && !text) {
+      return res.status(400).json({ error: 'Data file atau teks dokumen tidak ditemukan' });
     }
     
     const prompt = `Ekstrak data biodata dan hasil tes PAPI Kostick dari dokumen ini. Kamu harus memahami Guide Interpreter PAPI Kostick. Berdasarkan skor dari masing-masing faktor PAPI Kostick (N, G, A, L, P, I, T, V, X, S, B, O, R, D, C, Z, E, K, F, W) yang ada di dokumen, hitung dan petakan ke dalam 9 aspek kepribadian berikut dengan taraf (level) dari 1 sampai 7 (1=Kurang Sekali, 2=Kurang, 3=Rata-rata Bawah, 4=Rata-rata, 5=Rata-rata Atas, 6=Baik, 7=Baik Sekali) sesuai dengan panduan / standar interpretasi psikologi yang berlaku.
@@ -590,6 +598,7 @@ Jika data tidak ditemukan, set string menjadi "" dan angka menjadi 0.`;
       prompt,
       data,
       mimeType,
+      text,
       fallback: {}
     });
 
@@ -603,11 +612,11 @@ Jika data tidak ditemukan, set string menjadi "" dan angka menjadi 0.`;
 // MBTI extraction
 apiRouter.post("/extract-mbti", async (req, res) => {
   try {
-    const { data, filename, currentKepribadian } = req.body;
+    const { data, filename, text, currentKepribadian } = req.body;
     const mimeType = normalizeMimeType(req.body.mimeType, filename, data);
     
-    if (!data) {
-      return res.status(400).json({ error: 'Data file tidak ditemukan' });
+    if (!data && !text) {
+      return res.status(400).json({ error: 'Data file atau teks dokumen tidak ditemukan' });
     }
     
     const prompt = `Ekstrak data biodata dan hasil tes MBTI dari dokumen ini. Kamu harus memahami Guide Interpreter MBTI dan profil/deskripsi tipe kepribadian (seperti ESTJ, INFP, dll.).
@@ -646,6 +655,7 @@ Jika data MBTI tidak ditemukan, kembalikan data kepribadian sebelumnya saja tanp
       prompt,
       data,
       mimeType,
+      text,
       fallback: {}
     });
 

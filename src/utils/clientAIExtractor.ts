@@ -89,18 +89,25 @@ export async function callDirectAI({
     }
   ];
 
-  // Only attach image_url if mimeType is an image or PDF
-  // (Word .docx or plain text are already converted to text above and will cause 400 Bad Request if passed to image_url)
   if (data && mimeType) {
     const isImage = mimeType.startsWith('image/');
-    const isPdf = mimeType === 'application/pdf';
-    if (isImage || isPdf) {
+    if (isImage) {
       userContent.push({
         type: 'image_url',
         image_url: {
           url: `data:${mimeType};base64,${data}`
         }
       });
+    } else if (mimeType === 'application/pdf') {
+      if (settings.provider === 'openrouter') {
+        userContent.push({
+          type: 'file',
+          file: {
+            filename: 'document.pdf',
+            file_data: `data:application/pdf;base64,${data}`
+          }
+        });
+      }
     }
   }
 
@@ -320,6 +327,7 @@ export async function executeExtraction({
   mimeType,
   filename,
   text,
+  supabaseUrl,
   extraBody = {}
 }: {
   apiEndpoint: string;
@@ -328,6 +336,7 @@ export async function executeExtraction({
   mimeType?: string;
   filename: string;
   text?: string;
+  supabaseUrl?: string;
   extraBody?: Record<string, any>;
 }) {
   const settings = getAISettings();
@@ -364,6 +373,7 @@ export async function executeExtraction({
         data,
         filename,
         text,
+        supabaseUrl,
         ...extraBody
       })
     });
