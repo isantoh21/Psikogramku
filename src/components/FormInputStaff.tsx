@@ -7,6 +7,7 @@ import {
   mapISTSubscoreToLevel,
   calculateISTBerpikirSistematis,
   calculateISTPemahamanKonsep,
+  calculateISTPenalaranVerbal,
   getStaffScaleCode,
   getStaffScaleFullLabel
 } from '../utils/scoring';
@@ -223,16 +224,30 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
     newScore: number | '',
     newCat: string
   ) => {
-    const level = convertStaffAspectWithScore(newCat, newScore);
+    let level: ScaleLevel;
+    let finalCat = newCat;
+
+    if (field === 'pemahamanVerbal') {
+      if (newScore !== '') {
+        const cappedScore = Math.min(20, Math.max(0, Math.round(Number(newScore))));
+        level = mapISTSubscoreToLevel(cappedScore);
+        finalCat = getStaffScaleCode(level);
+      } else {
+        level = convertStaffAspectWithScore(newCat, newScore);
+      }
+    } else {
+      level = convertStaffAspectWithScore(newCat, newScore);
+    }
+
     setState(prev => ({
       ...prev,
       aspekScores: {
         ...prev.aspekScores,
-        [field]: newScore,
+        [field]: newScore !== '' && field === 'pemahamanVerbal' ? Math.min(20, Math.max(0, Math.round(Number(newScore)))) : newScore,
       },
       aspekKategori: {
         ...prev.aspekKategori,
-        [field]: newCat,
+        [field]: finalCat,
       },
       intelektual: {
         ...prev.intelektual,
@@ -282,10 +297,25 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
         const base = prev || INITIAL_STAFF_STATE;
         const baseClient = base.clientData || INITIAL_STAFF_STATE.clientData;
 
-        // 1. Aspek Pemahaman Verbal, Analisa-Sintesa, Kemampuan Numerik (Skor Maksimal 20 & Kategori PDF)
-        const verbalScore = (skorLangsung?.pemahamanVerbal !== null && skorLangsung?.pemahamanVerbal !== undefined && skorLangsung?.pemahamanVerbal !== '')
-          ? Number(skorLangsung.pemahamanVerbal)
-          : (istSubscores?.WA && istSubscores?.GE ? Math.round((Number(istSubscores.WA) + Number(istSubscores.GE)) / 2) : (base.aspekScores?.pemahamanVerbal ?? ''));
+        // 1. Aspek Penalaran / Pemahaman Verbal: Dihitung dari (GE + WA) / 2 dengan skor maksimal 20
+        let verbalScore: number | '' = base.aspekScores?.pemahamanVerbal ?? '';
+        let finalVerbal: ScaleLevel = base.intelektual.pemahamanVerbal;
+        let verbalCat: string = (tarafLangsung?.pemahamanVerbal ?? base.aspekKategori?.pemahamanVerbal ?? '').trim();
+
+        const hasGE = istSubscores?.GE !== null && istSubscores?.GE !== undefined && istSubscores?.GE !== '';
+        const hasWA = istSubscores?.WA !== null && istSubscores?.WA !== undefined && istSubscores?.WA !== '';
+
+        if (hasGE || hasWA) {
+          const resVerbal = calculateISTPenalaranVerbal(istSubscores?.GE, istSubscores?.WA);
+          verbalScore = resVerbal.score;
+          finalVerbal = resVerbal.level;
+          verbalCat = resVerbal.code;
+        } else if (skorLangsung?.pemahamanVerbal !== null && skorLangsung?.pemahamanVerbal !== undefined && skorLangsung?.pemahamanVerbal !== '') {
+          verbalScore = Math.min(20, Math.max(0, Math.round(Number(skorLangsung.pemahamanVerbal))));
+          finalVerbal = convertStaffAspectWithScore(verbalCat, verbalScore);
+        } else if (verbalCat) {
+          finalVerbal = convertStaffAspectWithScore(verbalCat, '');
+        }
 
         const se = Number(istSubscores?.SE) || 0;
         const wa = Number(istSubscores?.WA) || 0;
@@ -299,11 +329,9 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
           ? Number(skorLangsung.kemampuanNumerik)
           : (istSubscores?.RA && istSubscores?.ZR ? Math.round((Number(istSubscores.RA) + Number(istSubscores.ZR)) / 2) : (base.aspekScores?.kemampuanNumerik ?? ''));
 
-        const verbalCat = (tarafLangsung?.pemahamanVerbal ?? base.aspekKategori?.pemahamanVerbal ?? '').trim();
         const analisaCat = (tarafLangsung?.analisaSintesa ?? tarafAnalisaSintesa ?? base.aspekKategori?.analisaSintesa ?? '').trim();
         const numerikCat = (tarafLangsung?.kemampuanNumerik ?? base.aspekKategori?.kemampuanNumerik ?? '').trim();
 
-        const finalVerbal = convertStaffAspectWithScore(verbalCat, verbalScore);
         const finalAnalisaSintesa = convertStaffAspectWithScore(analisaCat, analisaScore);
         const finalNumerik = convertStaffAspectWithScore(numerikCat, numerikScore);
 
@@ -940,7 +968,8 @@ Paragraf 5 (Kepribadian - Ketaatan & Kemandirian):
             <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
             <div className="space-y-1 leading-relaxed">
               <p className="font-semibold text-blue-950">Aturan Pengisian & Ekstraksi Seleksi Staf (Tes IST):</p>
-              <p>• <span className="font-semibold">Pemahaman Verbal, Analisa-Sintesa, & Kemampuan Numerik:</span> Langsung diambil dari kategori PDF tanpa dihitung, otomatis dikonversi dari <span className="font-semibold">SR, R, S, T, ST</span> ke <span className="font-semibold">KS, K, RB, R, RA, B, BS</span>.</p>
+              <p>• <span className="font-semibold">Penalaran / Pemahaman Verbal:</span> Dihitung otomatis dari rumus <span className="font-semibold">(GE + WA) / 2</span> (maksimal skor 20), lalu otomatis dipetakan ke taraf 1–7 (<span className="font-semibold">KS, K, RB, R, RA, B, BS</span>).</p>
+              <p>• <span className="font-semibold">Analisa-Sintesa & Kemampuan Numerik:</span> Menggunakan skor & kategori PDF yang terkonversi otomatis ke skala 7 taraf.</p>
               <p>• <span className="font-semibold">Berpikir Sistematis & Pemahaman Konsep:</span> Dihitung otomatis sesuai norma <span className="font-semibold">Guide Interpreter IST</span> (Berpikir Sistematis dari subtes <span className="font-semibold">ZR</span>, dan Pemahaman Konsep / Daya Paham dari rumus <span className="font-semibold">(AN + ZR) / 2</span>).</p>
             </div>
           </div>
@@ -1254,12 +1283,28 @@ Paragraf 5 (Kepribadian - Ketaatan & Kemandirian):
                         value={state.istSubscores?.[subtest] ?? ''}
                         onChange={(e) => {
                           const val = e.target.value === '' ? '' : Number(e.target.value);
-                          updateState('istSubscores', subtest, val);
-                          if (subtest === 'ZR') {
-                            updateState('intelektual', 'berpikirSistematis', calculateISTBerpikirSistematis(val));
-                            updateState('intelektual', 'pemahamanKonsep', calculateISTPemahamanKonsep(state.istSubscores?.AN, val));
-                          } else if (subtest === 'AN') {
-                            updateState('intelektual', 'pemahamanKonsep', calculateISTPemahamanKonsep(val, state.istSubscores?.ZR));
+                          if (subtest === 'GE' || subtest === 'WA') {
+                            const otherKey = subtest === 'GE' ? 'WA' : 'GE';
+                            const otherVal = state.istSubscores?.[otherKey];
+                            const resVerbal = calculateISTPenalaranVerbal(
+                              subtest === 'GE' ? val : otherVal,
+                              subtest === 'WA' ? val : otherVal
+                            );
+                            setState(prev => ({
+                              ...prev,
+                              istSubscores: { ...prev.istSubscores, [subtest]: val },
+                              aspekScores: { ...prev.aspekScores, pemahamanVerbal: resVerbal.score },
+                              aspekKategori: { ...prev.aspekKategori, pemahamanVerbal: resVerbal.code },
+                              intelektual: { ...prev.intelektual, pemahamanVerbal: resVerbal.level }
+                            }));
+                          } else {
+                            updateState('istSubscores', subtest, val);
+                            if (subtest === 'ZR') {
+                              updateState('intelektual', 'berpikirSistematis', calculateISTBerpikirSistematis(val));
+                              updateState('intelektual', 'pemahamanKonsep', calculateISTPemahamanKonsep(state.istSubscores?.AN, val));
+                            } else if (subtest === 'AN') {
+                              updateState('intelektual', 'pemahamanKonsep', calculateISTPemahamanKonsep(val, state.istSubscores?.ZR));
+                            }
                           }
                         }}
                         className="w-full px-1 py-1 border border-gray-200 rounded text-center text-xs font-semibold outline-none focus:border-purple-500"

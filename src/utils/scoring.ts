@@ -635,6 +635,39 @@ export const calculateISTPemahamanKonsep = (
 };
 
 /**
+ * Perhitungan Penalaran / Pemahaman Verbal IST:
+ * Rumus: (GE + WA) / 2 dengan skor maksimal 20.
+ * Menghitung nilai skor (0-20), menentukan taraf (1-7: KS sampai BS), dan kode taraf.
+ */
+export const calculateISTPenalaranVerbal = (
+  ge: number | string | undefined | null,
+  wa: number | string | undefined | null
+): { score: number | ''; level: ScaleLevel; code: string } => {
+  const geVal = ge === '' || ge === undefined || ge === null ? NaN : Number(ge);
+  const waVal = wa === '' || wa === undefined || wa === null ? NaN : Number(wa);
+
+  if (isNaN(geVal) && isNaN(waVal)) {
+    return { score: '', level: 4, code: 'R' };
+  }
+
+  let rawAvg = 0;
+  if (!isNaN(geVal) && isNaN(waVal)) {
+    rawAvg = geVal;
+  } else if (isNaN(geVal) && !isNaN(waVal)) {
+    rawAvg = waVal;
+  } else {
+    rawAvg = (geVal + waVal) / 2;
+  }
+
+  // Maksimal skor akhir adalah 20 setelah dibagi 2
+  const finalScore = Math.min(20, Math.max(0, Math.round(rawAvg)));
+  const level = mapISTSubscoreToLevel(finalScore);
+  const code = getStaffScaleCode(level);
+
+  return { score: finalScore, level, code };
+};
+
+/**
  * Perhitungan Berpikir Sistematis sesuai Guide Interpreter Brilian Psikologi (CFIT Subtes 1)
  * Range:
  * Nilai benar 2-1 (dan 0) : kurang sekali (KS = 1)
