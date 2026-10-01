@@ -20,17 +20,15 @@ export function cleanJsonOutput(rawText: string, fallback: any = {}) {
  */
 export function canExecuteDirectly(settings?: AISettings): boolean {
   const s = settings || getAISettings();
-  if (!s) return true;
-  if (s.provider === 'koboillm') return true;
+  if (!s) return false;
+  // If user entered an API key, browser can call the AI provider directly!
+  if (s.apiKey && s.apiKey.trim() !== '' && s.apiKey !== 'sk-1wbq_Yt3lZPxwkDRXZYQow') return true;
   if (s.provider === 'custom' && !!s.baseUrl && !!s.apiKey) return true;
-  if (s.apiKey && s.apiKey.trim() !== '') return true;
-  // If provider is gemini without user API key, direct call is still supported via built-in KoboiLLM
-  if (s.provider === 'gemini') return true;
   return false;
 }
 
 /**
- * Execute chat completion directly from browser to AI provider (KoboiLLM / OpenAI / etc).
+ * Execute chat completion directly from browser to AI provider (Google Gemini / OpenAI / Groq / OpenRouter).
  * This completely bypasses Vercel Serverless Function 10s timeout & 4.5MB payload limits!
  */
 export async function callDirectAI({
@@ -48,39 +46,70 @@ export async function callDirectAI({
 }) {
   const settings = getAISettings();
   let baseUrl = settings.baseUrl || '';
-  let apiKey = settings.apiKey || '';
-  let model = settings.model || 'gemini/gemini-2.5-flash';
-
-  if (settings.provider === 'koboillm') {
-    baseUrl = baseUrl || 'https://api.koboillm.com/v1';
-    apiKey = apiKey || 'sk-1wbq_Yt3lZPxwkDRXZYQow';
-    model = model || 'gemini/gemini-2.5-flash';
-  } else if (settings.provider === 'gemini' && (!settings.apiKey || settings.apiKey.trim() === '')) {
-    // If user is on default Gemini without an API key, use direct KoboiLLM connection
-    baseUrl = 'https://api.koboillm.com/v1';
-    apiKey = 'sk-1wbq_Yt3lZPxwkDRXZYQow';
-    model = 'gemini/gemini-2.5-flash';
-  } else if (settings.provider === 'openai') {
-    baseUrl = baseUrl || 'https://api.openai.com/v1';
-    model = model || 'gpt-4o-mini';
-  } else if (settings.provider === 'openrouter') {
-    baseUrl = baseUrl || 'https://openrouter.ai/api/v1';
-    model = model || 'google/gemini-2.5-flash';
-  } else if (settings.provider === 'groq') {
-    baseUrl = baseUrl || 'https://api.groq.com/openai/v1';
-    model = model || 'llama-3.3-70b-versatile';
-  } else if (settings.provider === 'custom') {
-    baseUrl = baseUrl || 'https://api.openai.com/v1';
-    model = model || 'gemini/gemini-2.5-flash';
-  }
-
-  const endpoint = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
+  let apiKey = (settings.apiKey || '').trim();
+  let model = settings.model || '';
 
   let combinedText = prompt;
   if (text && text.trim()) {
     combinedText += `\n\n=== BERIKUT TEKS CATATAN / TRANSKRIP DOKUMEN ===\n${text.trim()}`;
   }
   combinedText += `\n\nPENTING: Kembalikan HANYA format JSON valid tanpa tanda kutip markdown \`\`\`json.`;
+
+  // 1. Direct Google Gemini call from browser if provider is Gemini with API key
+  if (settings.provider === 'gemini') {
+    if (!apiKey) {
+      throw new Error('API Key Google Gemini belum diisi. Masukkan API Key Anda di menu ⚙️ Pengaturan AI.');
+    }
+    const modelName = model || 'gemini-2.5-flash-lite';
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    const parts: any[] = [{ text: combinedText }];
+    if (data && mimeType) {
+      parts.push({
+        inlineData: {
+          mimeType,
+          data
+        }
+      });
+    }
+    const response = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: { responseMimeType: 'application/json' }
+      })
+    });
+    const resJson = await response.json();
+    if (!response.ok) {
+      throw new Error(resJson?.error?.message || `Google Gemini API Error (${response.status})`);
+    }
+    const rawOutput = resJson?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    return cleanJsonOutput(rawOutput, fallback);
+  }
+
+  // 2. OpenAI-compatible providers (Groq, OpenAI, OpenRouter, Custom, KoboiLLM)
+  if (settings.provider === 'openai') {
+    baseUrl = baseUrl || 'https://api.openai.com/v1';
+    model = model || 'gpt-4o-mini';
+  } else if (settings.provider === 'openrouter') {
+    baseUrl = baseUrl || 'https://openrouter.ai/api/v1';
+    model = model || 'google/gemini-2.0-flash-001';
+  } else if (settings.provider === 'groq') {
+    baseUrl = baseUrl || 'https://api.groq.com/openai/v1';
+    model = model || 'llama-3.3-70b-versatile';
+  } else if (settings.provider === 'koboillm') {
+    baseUrl = baseUrl || 'https://api.koboillm.com/v1';
+    model = model || 'gemini/gemini-2.5-flash';
+  } else if (settings.provider === 'custom') {
+    baseUrl = baseUrl || 'https://api.openai.com/v1';
+    model = model || 'gemini/gemini-2.5-flash';
+  }
+
+  if (!apiKey) {
+    throw new Error(`API Key untuk ${settings.provider} belum diisi. Masukkan API Key Anda di menu ⚙️ Pengaturan AI.`);
+  }
+
+  const endpoint = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
 
   const userContent: any[] = [
     { 
@@ -388,15 +417,7 @@ export async function executeExtraction({
     }
 
     if (!response.ok) {
-      // If server failed with FUNCTION_INVOCATION_FAILED, timeout (504), 500, or payload limit (413),
-      // retry with direct KoboiLLM AI call immediately as emergency fallback!
-      if (
-        rawText.includes('FUNCTION_INVOCATION_FAILED') ||
-        response.status === 500 ||
-        response.status === 504 ||
-        response.status === 413
-      ) {
-        console.warn(`[AI Client] Serverless gagal (Status ${response.status}). Mencoba fallback langsung ke KoboiLLM...`);
+      if (canExecuteDirectly(settings)) {
         try {
           const directFallback = await callDirectAI({
             prompt,
@@ -413,20 +434,23 @@ export async function executeExtraction({
       }
 
       if (response.status === 404) {
-        throw new Error('API Server Vercel tidak ditemukan (Status 404). Silakan periksa file vercel.json atau gunakan Custom Provider di Pengaturan AI.');
+        throw new Error('API Server Vercel tidak ditemukan (Status 404). Silakan periksa file vercel.json atau masukkan API Key di menu ⚙️ Pengaturan AI.');
       }
       if (response.status === 413) {
-        throw new Error('Ukuran file melebihi batas serverless Vercel (4.5MB). Harap pilih file yang lebih kecil atau gunakan mode Custom Provider.');
+        throw new Error('Ukuran file melebihi batas serverless Vercel (4.5MB). Harap pilih file yang lebih kecil atau masukkan API Key di menu ⚙️ Pengaturan AI.');
       }
       if (response.status === 504) {
-        throw new Error('Vercel Serverless Function Timeout (504). Batas waktu serverless habis. Disarankan menggunakan KoboiLLM di menu "⚙️ Pengaturan AI".');
+        throw new Error('Vercel Serverless Function Timeout (504). Batas waktu serverless habis. Disarankan memasukkan API Key di menu "⚙️ Pengaturan AI" agar diproses langsung.');
       }
       const errText = resData?.error || rawText || '';
       if (errText.includes('FUNCTION_INVOCATION_FAILED')) {
-        throw new Error('Server Vercel Serverless mengalami FUNCTION_INVOCATION_FAILED. Silakan buka menu "⚙️ Pengaturan AI" di atas dan pilih penyedia "KoboiLLM" untuk proses langsung tanpa batasan server.');
+        throw new Error('Server Vercel Serverless mengalami FUNCTION_INVOCATION_FAILED. Pastikan Anda telah melakukan redeploy setelah perbaikan, atau buka menu "⚙️ Pengaturan AI" di atas untuk memasukkan API Key Anda.');
+      }
+      if (errText.includes('GEMINI_API_KEY') || errText.includes('API Key') || errText.includes('belum dikonfigurasi')) {
+        throw new Error('API Key belum dikonfigurasi. Silakan buka menu "⚙️ Pengaturan AI" di bagian atas untuk memasukkan Google Gemini / OpenAI / Groq API Key Anda.');
       }
       if (errText.includes('429') || errText.includes('RESOURCE_EXHAUSTED') || errText.includes('quota')) {
-        throw new Error('Kuota harian gratis AI telah habis (Error 429). Silakan buka menu "⚙️ Pengaturan AI" untuk memasukkan API Key atau beralih ke KoboiLLM / OpenAI.');
+        throw new Error('Kuota harian gratis AI telah habis (Error 429). Silakan buka menu "⚙️ Pengaturan AI" untuk memasukkan API Key pribadi Anda.');
       }
       throw new Error(errText || `Gagal memproses file (Status ${response.status})`);
     }

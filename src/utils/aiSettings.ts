@@ -72,10 +72,10 @@ export const PROVIDER_OPTIONS: {
 ];
 
 export const DEFAULT_AI_SETTINGS: AISettings = {
-  provider: 'koboillm',
-  apiKey: 'sk-1wbq_Yt3lZPxwkDRXZYQow',
-  model: 'gemini/gemini-2.5-flash',
-  baseUrl: 'https://api.koboillm.com/v1',
+  provider: 'gemini',
+  apiKey: '',
+  model: 'gemini-2.5-flash-lite',
+  baseUrl: '',
   contextLength: 1050000,
   supportsVision: true
 };
@@ -85,17 +85,9 @@ export function getAISettings(): AISettings {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      // If user had legacy settings with 'gemini' and no API key, auto-migrate to KoboiLLM default
-      // so requests are handled directly by the client without hitting Vercel serverless limits
-      if (parsed.provider === 'gemini' && (!parsed.apiKey || parsed.apiKey.trim() === '')) {
-        return {
-          ...DEFAULT_AI_SETTINGS,
-          ...parsed,
-          provider: 'koboillm',
-          apiKey: DEFAULT_AI_SETTINGS.apiKey,
-          baseUrl: DEFAULT_AI_SETTINGS.baseUrl,
-          model: DEFAULT_AI_SETTINGS.model
-        };
+      // If user had legacy expired koboillm default or dead key, reset to clean default
+      if (parsed.provider === 'koboillm' && (!parsed.apiKey || parsed.apiKey === 'sk-1wbq_Yt3lZPxwkDRXZYQow')) {
+        return { ...DEFAULT_AI_SETTINGS };
       }
       return { ...DEFAULT_AI_SETTINGS, ...parsed };
     }
