@@ -7,6 +7,17 @@ if (typeof window !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 }
 
+export interface DeterministicKraepelin {
+  kecepatan: number;
+  ketelitian: number;
+  ketekunan: number;
+  dayaTahanStres: number;
+  pankerRaw?: string;
+  tiankerRaw?: string;
+  jankerRaw?: string;
+  hankerRaw?: string;
+}
+
 export interface ProcessedDocument {
   filename: string;
   mimeType: string;
@@ -14,6 +25,7 @@ export interface ProcessedDocument {
   base64?: string;
   supabaseUrl?: string;
   isScannedPdf?: boolean;
+  kraepelinDirect?: DeterministicKraepelin;
 }
 
 /**
@@ -73,13 +85,14 @@ export async function fileToBase64(file: File | Blob): Promise<string> {
 }
 
 /**
- * Extracts text from a PDF document using PDF.js with 2D layout awareness (preserving table rows and columns).
+ * Extracts text from a PDF document using PDF.js with 2D spatial layout awareness (preserving table rows, columns, and checkmark alignments).
  */
 export async function extractTextFromPdf(arrayBuffer: ArrayBuffer): Promise<string> {
   try {
     const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) });
     const pdf = await loadingTask.promise;
     let fullText = '';
+    const CHAR_WIDTH = 6;
     
     const maxPages = Math.min(pdf.numPages, 10);
     for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
@@ -99,10 +112,10 @@ export async function extractTextFromPdf(arrayBuffer: ArrayBuffer): Promise<stri
       // Sort items by Y descending (top-to-bottom on page)
       itemsWithCoords.sort((a, b) => b.y - a.y);
 
-      // Cluster items with Y within 4px into the same line
+      // Cluster items with Y within 5px into the same line
       const lines: { y: number; items: typeof itemsWithCoords }[] = [];
       for (const item of itemsWithCoords) {
-        let line = lines.find(l => Math.abs(l.y - item.y) <= 4);
+        let line = lines.find(l => Math.abs(l.y - item.y) <= 5);
         if (!line) {
           line = { y: item.y, items: [] };
           lines.push(line);
@@ -113,21 +126,20 @@ export async function extractTextFromPdf(arrayBuffer: ArrayBuffer): Promise<stri
       // Re-sort lines from top to bottom
       lines.sort((a, b) => b.y - a.y);
 
-      // Within each line, sort from left to right and join with appropriate spacing
+      // Within each line, position items along spatial character grid so columns align!
       const pageLines = lines.map(line => {
         line.items.sort((a, b) => a.x - b.x);
-        let lineStr = '';
-        let lastX = -1;
+        const lineChars: string[] = [];
         for (const item of line.items) {
-          if (lastX >= 0) {
-            const gap = item.x - lastX;
-            if (gap > 20) lineStr += '\t';
-            else lineStr += ' ';
+          const colIndex = Math.max(0, Math.round(item.x / CHAR_WIDTH));
+          while (lineChars.length < colIndex) {
+            lineChars.push(' ');
           }
-          lineStr += item.str;
-          lastX = item.x + (item.str.length * 5);
+          for (let i = 0; i < item.str.length; i++) {
+            lineChars[colIndex + i] = item.str[i];
+          }
         }
-        return lineStr.trim();
+        return lineChars.join('').trimEnd();
       }).filter(Boolean);
 
       if (pageLines.length > 0) {
@@ -140,6 +152,124 @@ export async function extractTextFromPdf(arrayBuffer: ArrayBuffer): Promise<stri
     console.warn('[PDF.js Text Extraction Warning]', err);
     return '';
   }
+}
+
+/**
+ * Deterministically extracts Kraepelin / Sikap Kerja results directly from PDF vector text coordinates.
+ * Matches rows (Panker, Tianker, Janker, Hanker) and columns (Baik Sekali, Baik, Sedang, Kurang, Kurang Sekali)
+ * based on minimum Euclidean horizontal distance to row checkmarks (V, ✓, X).
+ */
+export async function extractDeterministicKraepelin(arrayBuffer: ArrayBuffer): Promise<DeterministicKraepelin | null> {
+  try {
+    const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) });
+    const pdf = await loadingTask.promise;
+    
+    for (let pageNum = 1; pageNum <= Math.min(pdf.numPages, 4); pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      const items = (textContent.items || []).map((it: any) => ({
+        str: (it && typeof it.str === 'string') ? it.str.trim() : '',
+        x: it.transform ? Number(it.transform[4]) : 0,
+        y: it.transform ? Number(it.transform[5]) : 0
+      })).filter((it: any) => it.str.length > 0);
+
+      // Group items into lines
+      const lines: { y: number; items: typeof items }[] = [];
+      items.sort((a, b) => b.y - a.y);
+      for (const item of items) {
+        let line = lines.find(l => Math.abs(l.y - item.y) <= 6);
+        if (!line) {
+          line = { y: item.y, items: [] };
+          lines.push(line);
+        }
+        line.items.push(item);
+      }
+
+      // Check if page contains Kraepelin keywords
+      const hasKraepelinKeywords = lines.some(l => 
+        l.items.some(it => /kraeplin|kraepelin|panker|tianker|janker|hanker/i.test(it.str))
+      );
+      if (!hasKraepelinKeywords) continue;
+
+      // Find column headers line(s)
+      const detectedCols: { type: 'BS' | 'B' | 'R' | 'K' | 'KS'; x: number }[] = [];
+      for (const line of lines) {
+        const lineText = line.items.map(i => i.str.toLowerCase()).join(' ');
+        if (lineText.includes('baik') && (lineText.includes('sedang') || lineText.includes('cukup') || lineText.includes('kurang'))) {
+          line.items.sort((a, b) => a.x - b.x);
+          const subLine = lines.find(l => l !== line && Math.abs(l.y - line.y) <= 22 && l.y < line.y);
+          const subItems = subLine ? subLine.items : [];
+
+          for (const item of line.items) {
+            const s = item.str.toLowerCase();
+            let colType: 'BS' | 'B' | 'R' | 'K' | 'KS' | '' = '';
+            if (s === 'baik' || s === 'baik sekali') {
+              const hasSekali = s.includes('sekali') || subItems.some(si => si.str.toLowerCase().includes('sekali') && Math.abs(si.x - item.x) <= 35);
+              colType = hasSekali ? 'BS' : 'B';
+            } else if (s === 'sedang' || s === 'cukup') {
+              colType = 'R';
+            } else if (s === 'kurang' || s === 'kurang sekali') {
+              const hasSekali = s.includes('sekali') || subItems.some(si => si.str.toLowerCase().includes('sekali') && Math.abs(si.x - item.x) <= 35);
+              colType = hasSekali ? 'KS' : 'K';
+            } else if (['bs', 'b', 'r', 'c', 'k', 'ks'].includes(s)) {
+              colType = (s.toUpperCase() === 'C' ? 'R' : s.toUpperCase()) as any;
+            }
+
+            if (colType) {
+              detectedCols.push({ type: colType, x: item.x });
+            }
+          }
+          if (detectedCols.length >= 3) break;
+        }
+      }
+
+      if (detectedCols.length < 3) continue;
+
+      const rowDefs = [
+        { key: 'kecepatan' as const, patterns: [/^panker/i, /kecepatan/i], rawKey: 'pankerRaw' as const },
+        { key: 'ketelitian' as const, patterns: [/^tianker/i, /ketelitian/i], rawKey: 'tiankerRaw' as const },
+        { key: 'ketekunan' as const, patterns: [/^janker/i, /ketekunan/i, /stabilitas/i], rawKey: 'jankerRaw' as const },
+        { key: 'dayaTahanStres' as const, patterns: [/^hanker/i, /daya tahan/i, /ketahanan/i], rawKey: 'hankerRaw' as const }
+      ];
+
+      const scoreMap: Record<string, number> = { 'BS': 7, 'B': 6, 'R': 4, 'K': 2, 'KS': 1 };
+      const kraepelinResult: Partial<DeterministicKraepelin> = {};
+      let matchCount = 0;
+
+      for (const line of lines) {
+        line.items.sort((a, b) => a.x - b.x);
+        for (const rowDef of rowDefs) {
+          const labelIndex = line.items.findIndex(it => rowDef.patterns.some(p => p.test(it.str)));
+          if (labelIndex >= 0) {
+            const labelItem = line.items[labelIndex];
+            const candidateMarks = line.items.filter(it => it.x > labelItem.x + 10);
+            const mark = candidateMarks.find(it => /^[vx✓√•1-7c]$/i.test(it.str) || it.str === 'V') || candidateMarks[0];
+            if (mark) {
+              let closest = detectedCols[0];
+              let minDist = 99999;
+              for (const col of detectedCols) {
+                const d = Math.abs(col.x - mark.x);
+                if (d < minDist) {
+                  minDist = d;
+                  closest = col;
+                }
+              }
+              kraepelinResult[rowDef.key] = scoreMap[closest.type] || 4;
+              kraepelinResult[rowDef.rawKey] = closest.type;
+              matchCount++;
+            }
+          }
+        }
+      }
+
+      if (matchCount >= 3) {
+        return kraepelinResult as DeterministicKraepelin;
+      }
+    }
+  } catch (e) {
+    console.warn('[Deterministic Kraepelin Parsing Warning]', e);
+  }
+  return null;
 }
 
 /**
@@ -164,6 +294,11 @@ export async function renderPdfPagesToImage(arrayBuffer: ArrayBuffer, maxPages =
       canvas.height = viewport.height;
       const ctx = canvas.getContext('2d');
       if (!ctx) return null;
+
+      // CRITICAL: Fill with pure white background, otherwise transparent pixels convert to black in JPEG!
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
       await page.render({ canvasContext: ctx, viewport }).promise;
       const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
       return dataUrl.split(',')[1] || null;
@@ -184,6 +319,10 @@ export async function renderPdfPagesToImage(arrayBuffer: ArrayBuffer, maxPages =
       pageCanvas.height = viewport.height;
       const pageCtx = pageCanvas.getContext('2d');
       if (pageCtx) {
+        // CRITICAL: Fill with pure white background
+        pageCtx.fillStyle = '#ffffff';
+        pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+
         await page.render({ canvasContext: pageCtx, viewport }).promise;
         renderedPages.push({ canvas: pageCanvas, width: viewport.width, height: viewport.height });
         maxWidth = Math.max(maxWidth, viewport.width);
@@ -199,7 +338,7 @@ export async function renderPdfPagesToImage(arrayBuffer: ArrayBuffer, maxPages =
     const combinedCtx = combinedCanvas.getContext('2d');
     if (!combinedCtx) return null;
 
-    combinedCtx.fillStyle = '#e2e8f0';
+    combinedCtx.fillStyle = '#ffffff';
     combinedCtx.fillRect(0, 0, maxWidth, totalHeight);
 
     let currentY = 0;
@@ -298,8 +437,20 @@ export async function processDocumentFile(
       if (extractedText) {
         result.text = extractedText;
       }
+
+      // 2. Check for deterministic Kraepelin / Sikap Kerja data directly from coordinates
+      const directKraepelin = await extractDeterministicKraepelin(arrayBuffer);
+      if (directKraepelin) {
+        result.kraepelinDirect = directKraepelin;
+        const hint = `[HASIL ANALISIS TABEL KRAEPELIN PRESISI TINGGI DARI KOORDINAT ASLI]:\n` +
+          `- Panker (Kecepatan Kerja): ${directKraepelin.pankerRaw} (Nilai: ${directKraepelin.kecepatan})\n` +
+          `- Tianker (Ketelitian Kerja): ${directKraepelin.tiankerRaw} (Nilai: ${directKraepelin.ketelitian})\n` +
+          `- Janker (Ketekunan / Stabilitas Kerja): ${directKraepelin.jankerRaw} (Nilai: ${directKraepelin.ketekunan})\n` +
+          `- Hanker (Ketahanan / Daya Tahan Stres): ${directKraepelin.hankerRaw} (Nilai: ${directKraepelin.dayaTahanStres})\n\n`;
+        result.text = hint + (result.text || '');
+      }
       
-      // 2. ALWAYS render page(s) into JPEG image so Multimodal Vision AI can inspect
+      // 3. ALWAYS render page(s) into JPEG image so Multimodal Vision AI can inspect
       // checkboxes, tables, tick marks, and graphs with 100% precision!
       const renderedJpgBase64 = await renderPdfPagesToImage(arrayBuffer, 4);
       if (renderedJpgBase64) {

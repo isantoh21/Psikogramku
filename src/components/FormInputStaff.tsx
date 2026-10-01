@@ -449,7 +449,24 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
       });
       
       const normalized = normalizeKraepelinResult(rawData);
-      const { clientData: extractedClientData, sikapKerja: extractedSikapKerja, rawDetails } = normalized;
+      let { clientData: extractedClientData, sikapKerja: extractedSikapKerja, rawDetails } = normalized;
+
+      // If coordinate-based direct extraction found high-confidence Sikap Kerja, use 100% ground-truth precision
+      if (processed.kraepelinDirect) {
+        extractedSikapKerja = {
+          kecepatan: processed.kraepelinDirect.kecepatan,
+          ketelitian: processed.kraepelinDirect.ketelitian,
+          ketekunan: processed.kraepelinDirect.ketekunan,
+          dayaTahanStres: processed.kraepelinDirect.dayaTahanStres
+        };
+        rawDetails = {
+          ...(rawDetails || {}),
+          panker: processed.kraepelinDirect.pankerRaw || rawDetails?.panker || '',
+          tianker: processed.kraepelinDirect.tiankerRaw || rawDetails?.tianker || '',
+          janker: processed.kraepelinDirect.jankerRaw || rawDetails?.janker || '',
+          hanker: processed.kraepelinDirect.hankerRaw || rawDetails?.hanker || '',
+        };
+      }
 
       setState(prev => {
         const base = prev || INITIAL_STAFF_STATE;
