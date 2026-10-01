@@ -95,3 +95,62 @@ export async function uploadFileToSupabase(
     };
   }
 }
+
+/**
+ * Purges files older than maxAgeDays (default: 30 days / 1 month) from Supabase Storage.
+ */
+export async function purgeOldFiles(
+  maxAgeDays = 30
+): Promise<{ success: boolean; purgedCount: number; purgedFiles: string[]; error?: string }> {
+  const supabase = getSupabase();
+  if (!supabase) {
+    return { success: false, purgedCount: 0, purgedFiles: [], error: 'Supabase belum dikonfigurasi' };
+  }
+
+  const cutoffTime = Date.now() - (maxAgeDays * 24 * 60 * 60 * 1000);
+  const folders = ['ist', 'kraepelin', 'papi', 'mbti', 'bei', 'documents', 'markitdown', 'psikotes', ''];
+  const deletedFiles: string[] = [];
+
+  try {
+    for (const folder of folders) {
+      const { data: files, error } = await supabase.storage.from(BUCKET_NAME).list(folder, { limit: 100 });
+      if (error || !files) continue;
+
+      const toRemove: string[] = [];
+      for (const f of files) {
+        if (!f.name || f.name === '.emptyFolderPlaceholder') continue;
+
+        let fileTime = f.created_at ? new Date(f.created_at).getTime() : 0;
+        const match = f.name.match(/^(\d{13})_/);
+        if (match) {
+          fileTime = Number(match[1]);
+        }
+
+        if (fileTime && fileTime < cutoffTime) {
+          toRemove.push(folder ? `${folder}/${f.name}` : f.name);
+        }
+      }
+
+      if (toRemove.length > 0) {
+        const { error: delErr } = await supabase.storage.from(BUCKET_NAME).remove(toRemove);
+        if (!delErr) {
+          deletedFiles.push(...toRemove);
+        }
+      }
+    }
+
+    return {
+      success: true,
+      purgedCount: deletedFiles.length,
+      purgedFiles: deletedFiles
+    };
+  } catch (err: any) {
+    console.warn('[Supabase Storage Purge Exception]', err);
+    return {
+      success: false,
+      purgedCount: deletedFiles.length,
+      purgedFiles: deletedFiles,
+      error: err?.message || 'Gagal membersihkan file lama'
+    };
+  }
+}

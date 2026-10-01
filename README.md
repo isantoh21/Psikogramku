@@ -36,6 +36,34 @@ Jika Anda ingin file dokumen tersimpan secara permanen di storage cloud:
 
 ---
 
+## 🧹 Fitur Auto-Purge (Pembersihan Otomatis File > 30 Hari / 1 Bulan)
+
+Aplikasi telah dilengkapi fitur **Auto-Purge otomatis** untuk menghapus file di Supabase Storage yang berusia lebih dari 30 hari (1 bulan):
+
+### 1. Otomatis via Vercel Cron
+Endpoint `/api/purge-files` telah terpasang di `vercel.json` dan otomatis dieksekusi setiap hari tengah malam (`0 0 * * *`) oleh sistem cron Vercel untuk mendeteksi dan membersihkan file yang berumur lebih dari 30 hari.
+
+### 2. Otomatis via Supabase Database (`pg_cron`)
+Bagi yang ingin pembersihan berjalan otomatis langsung di level database Supabase tanpa bergantung pada web server:
+Buka [Supabase SQL Editor](https://supabase.com/dashboard/project/ucgpmljuplocjmbspnag/sql/new) dan jalankan:
+```sql
+-- Aktifkan ekstensi pg_cron
+create extension if not exists pg_cron;
+
+-- Jadwalkan auto-purge setiap hari jam 00:00 untuk file yang lebih dari 30 hari
+select cron.schedule(
+  'auto-purge-psikogram-files-monthly',
+  '0 0 * * *',
+  $$
+    delete from storage.objects
+    where bucket_id = 'psikogram-files'
+      and created_at < now() - interval '30 days';
+  $$
+);
+```
+
+---
+
 ## 🚀 Panduan Menjalankan & Deploy
 
 ### Jalankan Lokal

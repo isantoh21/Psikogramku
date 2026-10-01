@@ -376,6 +376,71 @@ apiRouter.get("/health", (req, res) => {
   });
 });
 
+// Auto-purge old files endpoint (scheduled via Vercel Cron or called manually)
+const purgeHandler = async (req: express.Request, res: express.Response) => {
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://ucgpmljuplocjmbspnag.supabase.co';
+  const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjZ3BtbGp1cGxvY2ptYnNwbmFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzMTYwNzMsImV4cCI6MjEwNTg5MjA3M30.DTWsgiS8auTN81k1_5RUYILw92ka8yUpmPU2EqmuKx8';
+  const bucketName = process.env.SUPABASE_BUCKET || 'psikogram-files';
+
+  const maxAgeDays = Number(req.query.days || req.body?.days || 30);
+  const cutoffTime = Date.now() - (maxAgeDays * 24 * 60 * 60 * 1000);
+
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const folders = ['ist', 'kraepelin', 'papi', 'mbti', 'bei', 'documents', 'markitdown', 'psikotes', ''];
+    const deletedFiles: string[] = [];
+
+    for (const folder of folders) {
+      const { data: files, error } = await supabase.storage.from(bucketName).list(folder, { limit: 100 });
+      if (error || !files) continue;
+
+      const toRemove: string[] = [];
+      for (const file of files) {
+        if (!file.name || file.name === '.emptyFolderPlaceholder') continue;
+        
+        let fileTime = file.created_at ? new Date(file.created_at).getTime() : 0;
+        const match = file.name.match(/^(\d{13})_/);
+        if (match) {
+          fileTime = Number(match[1]);
+        }
+
+        if (fileTime && fileTime < cutoffTime) {
+          const fullPath = folder ? `${folder}/${file.name}` : file.name;
+          toRemove.push(fullPath);
+        }
+      }
+
+      if (toRemove.length > 0) {
+        const { error: delErr } = await supabase.storage.from(bucketName).remove(toRemove);
+        if (!delErr) {
+          deletedFiles.push(...toRemove);
+        } else {
+          console.warn(`[Auto-Purge Warning] Failed to delete in ${folder}:`, delErr.message);
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Auto-purge selesai. Berhasil membersihkan ${deletedFiles.length} file yang berusia lebih dari ${maxAgeDays} hari (1 bulan).`,
+      purgedCount: deletedFiles.length,
+      purgedFiles: deletedFiles,
+      cutoffDate: new Date(cutoffTime).toISOString()
+    });
+  } catch (err: any) {
+    console.error('Auto purge error:', err);
+    res.status(500).json({
+      success: false,
+      error: err?.message || 'Gagal menjalankan auto-purge file lama'
+    });
+  }
+};
+
+apiRouter.get('/purge-files', purgeHandler);
+apiRouter.post('/purge-files', purgeHandler);
+
 // Test connection endpoint for the AI Settings modal
 apiRouter.post("/test-ai", async (req, res) => {
   const startTime = Date.now();

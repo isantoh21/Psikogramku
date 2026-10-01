@@ -16,5 +16,11 @@
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/purge-files",
+      "schedule": "0 0 * * *"
+    }
   ]
 }
