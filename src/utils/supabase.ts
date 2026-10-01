@@ -8,7 +8,9 @@ export const SUPABASE_ANON_KEY =
   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SUPABASE_ANON_KEY) ||
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjZ3BtbGp1cGxvY2ptYnNwbmFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzMTYwNzMsImV4cCI6MjEwNTg5MjA3M30.DTWsgiS8auTN81k1_5RUYILw92ka8yUpmPU2EqmuKx8';
 
-export const BUCKET_NAME = 'psikogram-files';
+export const BUCKET_NAME = 
+  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SUPABASE_BUCKET) || 
+  'psikogram-files';
 
 let supabaseInstance: SupabaseClient | null = null;
 
