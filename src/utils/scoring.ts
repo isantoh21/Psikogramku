@@ -736,29 +736,92 @@ export const getStaffScaleFullLabel = (level: number): string => {
 };
 
 /**
+ * Benchmark Grey Area per Aspek untuk Laporan Pemeriksaan Psikologis Seleksi Manajer
+ * Berdasarkan format Laporan Brilian Psikologi:
+ * - Intelektual: Potensi Kecerdasan s/d Pemahaman Konsep = RA (5), Kemampuan Numerik = R (4)
+ * - Sikap Kerja: Kecepatan, Ketelitian, Ketekunan, Daya Tahan Stres, Orientasi Customer = R (4)
+ * - Kepribadian: Kematangan Emosi = RA (5), Kemasakan Sosial = R (4), Rasa Percaya Diri = R (4),
+ *   Motivasi Berprestasi, Sikap Mandiri, Inisiatif, Kemampuan Bekerjasama, Keterampilan Berkomunikasi, Loyalitas = RA (5)
+ * - Kepemimpinan: Kepemimpinan, Tanggungjawab, Pengambilan Keputusan, Pengembangan Karyawan = RA (5)
+ */
+export const MANAGER_ASPECT_TARGETS: number[] = [
+  // INTELEKTUAL (6)
+  5, // 1. Potensi Kecerdasan (RA)
+  5, // 2. Berpikir Sistematis (RA)
+  5, // 3. Pemahaman Verbal (RA)
+  5, // 4. Analisa-Sintesa (RA)
+  5, // 5. Pemahaman konsep (RA)
+  4, // 6. Kemampuan Numerik (R)
+
+  // SIKAP KERJA (5)
+  4, // 1. Kecepatan (R)
+  4, // 2. Ketelitian (R)
+  4, // 3. Ketekunan atau Keuletan (R)
+  4, // 4. Daya Tahan terhadap Stres (R)
+  4, // 5. Orientasi Customer atau Pelanggan (R)
+
+  // KEPRIBADIAN (9)
+  5, // 1. Kematangan Emosi (RA)
+  4, // 2. Kemasakan Sosial (R)
+  4, // 3. Rasa Percaya Diri (R)
+  5, // 4. Motivasi Berprestasi (RA)
+  5, // 5. Sikap Mandiri (RA)
+  5, // 6. Inisiatif (RA)
+  5, // 7. Kemampuan Bekerjasama (RA)
+  5, // 8. Keterampilan Berkomunikasi (RA)
+  5, // 9. Loyalitas (RA)
+
+  // KEPEMIMPINAN (4)
+  5, // 1. Kepemimpinan (RA)
+  5, // 2. Tanggungjawab (RA)
+  5, // 3. Pengambilan Keputusan (RA)
+  5, // 4. Pengembangan Karyawan (RA)
+];
+
+/**
  * CARA MENGHITUNG PSIKOGRAM (GUIDE INTERPRETER BRILIAN PSIKOLOGI):
  * Dihitung jumlah seluruh aspek di psikogram, kemudian dikurangi nilai yg
  * mendapatkan nilai dibawah grey area, kemudian dibagi jumlah seluruh aspek.
- * Misal: seluruh aspek = 19 dan dibawah grey area = 5 -> (19-5)/19 = 73%
- * Untuk Manajer: seluruh aspek = 23, grey area = RA (skor 5). Nilai < 5 adalah di bawah grey area.
+ * Misal: 24 aspek, di bawah grey area = 9 -> (24-9)/24 = 62.5% -> 63%
  */
-export const calculateGreyAreaScore = (scores: number[], greyAreaBenchmark = 5) => {
+export const calculateGreyAreaScore = (scores: number[], targets: number[] | number = 5) => {
   const totalAspek = scores.length || 1;
-  const diBawahGreyArea = scores.filter(s => (s || 4) < greyAreaBenchmark).length;
+  let diBawahGreyArea = 0;
+
+  for (let i = 0; i < totalAspek; i++) {
+    const s = scores[i] || 4;
+    const t = Array.isArray(targets) ? (targets[i] ?? 5) : targets;
+    if (s < t) {
+      diBawahGreyArea++;
+    }
+  }
+
   const memenuhiGreyArea = totalAspek - diBawahGreyArea;
   const persentase = Math.round((memenuhiGreyArea / totalAspek) * 100);
 
+  // Standar Kategori Rekomendasi Brilian Psikologi (Hal 4 Laporan Manajer):
+  // Over Specification (>91%)
+  // Disarankan (76-90%)
+  // Dipertimbangkan (61-75%)
+  // Kurang Disarankan (46-60%)
+  // Tidak Disarankan (<45%)
   let status = 'Disarankan';
   let badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-300';
-  if (persentase < 60) {
-    status = 'Tidak Disarankan';
-    badgeColor = 'bg-rose-100 text-rose-800 border-rose-300';
-  } else if (persentase < 75) {
+  if (persentase > 90) {
+    status = 'Over Specification';
+    badgeColor = 'bg-blue-100 text-blue-800 border-blue-300';
+  } else if (persentase >= 76) {
+    status = 'Disarankan';
+    badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+  } else if (persentase >= 61) {
     status = 'Dipertimbangkan';
     badgeColor = 'bg-amber-100 text-amber-800 border-amber-300';
-  } else if (persentase >= 85) {
-    status = 'Sangat Disarankan';
-    badgeColor = 'bg-blue-100 text-blue-800 border-blue-300';
+  } else if (persentase >= 46) {
+    status = 'Kurang Disarankan';
+    badgeColor = 'bg-orange-100 text-orange-800 border-orange-300';
+  } else {
+    status = 'Tidak Disarankan';
+    badgeColor = 'bg-rose-100 text-rose-800 border-rose-300';
   }
 
   return {

@@ -8,7 +8,8 @@ import {
   calculateISTPenalaranVerbal,
   getStaffScaleCode,
   getStaffScaleFullLabel,
-  calculateGreyAreaScore
+  calculateGreyAreaScore,
+  MANAGER_ASPECT_TARGETS
 } from '../utils/scoring';
 import { getAISettings } from '../utils/aiSettings';
 import { 
@@ -65,6 +66,7 @@ export function FormInputManajer({ state, setState }: FormInputManajerProps) {
     sikapKerja.ketelitian,
     sikapKerja.ketekunan,
     sikapKerja.dayaTahanStres,
+    sikapKerja.orientasiCustomer || 4,
     kepribadian.kematanganEmosi,
     kepribadian.kemasakanSosial,
     kepribadian.rasaPercayaDiri,
@@ -79,7 +81,7 @@ export function FormInputManajer({ state, setState }: FormInputManajerProps) {
     kepemimpinan.pengambilanKeputusan,
     kepemimpinan.pengembanganKaryawan
   ];
-  const greyCalc = calculateGreyAreaScore(managerScores, 5);
+  const greyCalc = calculateGreyAreaScore(managerScores, MANAGER_ASPECT_TARGETS);
 
   const [copied, setCopied] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState('');
@@ -689,6 +691,7 @@ Kecepatan: ${getStaffScaleLabel(sikapKerja.kecepatan)}
 Ketelitian: ${getStaffScaleLabel(sikapKerja.ketelitian)}
 Ketekunan atau Keuletan: ${getStaffScaleLabel(sikapKerja.ketekunan)}
 Daya Tahan terhadap Stres: ${getStaffScaleLabel(sikapKerja.dayaTahanStres)}
+Orientasi Customer atau Pelanggan: ${getStaffScaleLabel(sikapKerja.orientasiCustomer || 4)}
 
 --- KEPRIBADIAN ---
 Kematangan Emosi: ${getStaffScaleLabel(kepribadian.kematanganEmosi)}
@@ -712,10 +715,10 @@ ${msdtDetails.gayaKepemimpinan ? `Gaya Kepemimpinan Terdeteksi: ${msdtDetails.ga
 
 ${data}
 
-KESESUAIAN STANDAR MANAJERIAL (BENCHMARK GREY AREA RA):
-- Total Aspek: 23 Aspek
-- Aspek Memenuhi Standar (>= RA / Skor 5): ${greyCalc.memenuhiGreyArea} Aspek
-- Aspek di Bawah Standar (< RA / Skor 5): ${greyCalc.diBawahGreyArea} Aspek
+KESESUAIAN STANDAR MANAJERIAL (BENCHMARK GREY AREA):
+- Total Aspek: 24 Aspek
+- Aspek Memenuhi Standar: ${greyCalc.memenuhiGreyArea} Aspek
+- Aspek di Bawah Standar: ${greyCalc.diBawahGreyArea} Aspek
 - Skor Kesesuaian Standar: ${greyCalc.persentase}%
 - Status Rekomendasi: ${greyCalc.status}
 
@@ -880,7 +883,7 @@ ${kepemimpinan.kepemimpinan >= 5 ?
                 </span>
               </div>
               <p className="text-xs text-purple-200/80 mt-1 max-w-xl leading-relaxed">
-                Benchmark Grey Area berada pada taraf <span className="font-bold text-white bg-purple-800/60 px-1.5 py-0.5 rounded">RA (Rata-rata Atas / Nilai 5)</span>. Formula: ((23 - Aspek di Bawah RA) / 23) × 100%.
+                Benchmark Grey Area mengikuti standar Brilian Psikologi (taraf RA / 5 untuk sebagian besar aspek & taraf R / 4 untuk Kemampuan Numerik, aspek Sikap Kerja, Kemasakan Sosial & Rasa Percaya Diri).
               </p>
             </div>
             <div className="flex items-center gap-3 shrink-0">
@@ -899,19 +902,19 @@ ${kepemimpinan.kepemimpinan >= 5 ?
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4 pt-3.5 border-t border-purple-800/50 text-xs text-purple-100">
             <div>
               <span className="text-purple-300 text-[11px] block">Total Aspek:</span>
-              <span className="font-bold text-white">23 Aspek (6 + 4 + 9 + 4)</span>
+              <span className="font-bold text-white">24 Aspek (6 + 5 + 9 + 4)</span>
             </div>
             <div>
-              <span className="text-purple-300 text-[11px] block">Memenuhi Standar (≥ RA):</span>
+              <span className="text-purple-300 text-[11px] block">Memenuhi Standar:</span>
               <span className="font-bold text-emerald-300">{greyCalc.memenuhiGreyArea} Aspek</span>
             </div>
             <div>
-              <span className="text-purple-300 text-[11px] block">Di Bawah Standar (&lt; RA):</span>
+              <span className="text-purple-300 text-[11px] block">Di Bawah Standar:</span>
               <span className="font-bold text-rose-300">{greyCalc.diBawahGreyArea} Aspek</span>
             </div>
             <div>
               <span className="text-purple-300 text-[11px] block">Rumus Penilaian:</span>
-              <span className="font-medium text-purple-200 font-mono text-[11px]">({23} - {greyCalc.diBawahGreyArea}) / 23 = {greyCalc.persentase}%</span>
+              <span className="font-medium text-purple-200 font-mono text-[11px]">({24} - {greyCalc.diBawahGreyArea}) / 24 = {greyCalc.persentase}%</span>
             </div>
           </div>
         </div>
@@ -1406,6 +1409,7 @@ ${kepemimpinan.kepemimpinan >= 5 ?
               <p>• <span className="font-semibold">Ketelitian (Tianker):</span> Mengukur keakuratan kerja & kontrol kesalahan/lompatan.</p>
               <p>• <span className="font-semibold">Ketekunan (Janker):</span> Mengukur kestabilan konsistensi ritme kerja & keuletan terhadap tugas rutin.</p>
               <p>• <span className="font-semibold">Daya Tahan Stres (Hanker):</span> Mengukur ketahanan performa di bawah tekanan waktu & kelelahan mental.</p>
+              <p>• <span className="font-semibold">Orientasi Customer:</span> Memberikan pelayanan yang tepat dan efisien serta memenuhi kebutuhan nasabah/klien.</p>
             </div>
           </div>
 
@@ -1444,6 +1448,13 @@ ${kepemimpinan.kepemimpinan >= 5 ?
               ? { text: `Kraepelin: ${getStaffScaleCode(sikapKerja.dayaTahanStres)} (${getStaffScaleFullLabel(sikapKerja.dayaTahanStres)})`, variant: 'emerald' }
               : undefined,
             kraepelinDetails.dayaTahanStres || 'Kemampuan menghasilkan performance kerja yang stabil dalam situasi penuh tekanan.'
+          )}
+          {renderRadioGroup(
+            'sikapKerja',
+            'orientasiCustomer',
+            '5. Orientasi Customer atau Pelanggan',
+            undefined,
+            'Memberikan pelayanan yang tepat dan efisien kepada nasabah/klien dan berusaha untuk mengerti serta memenuhi kebutuhan nasabah.'
           )}
         </div>
 

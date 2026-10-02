@@ -1,6 +1,6 @@
 import React from 'react';
 import { ManagerAppState, INITIAL_MANAGER_STATE } from '../types';
-import { formatDateId, calculateGreyAreaScore } from '../utils/scoring';
+import { formatDateId, calculateGreyAreaScore, MANAGER_ASPECT_TARGETS } from '../utils/scoring';
 import { FileText } from 'lucide-react';
 
 interface PreviewPsikogramManajerProps {
@@ -26,6 +26,7 @@ export function PreviewPsikogramManajer({ state }: PreviewPsikogramManajerProps)
     sikapKerja.ketelitian,
     sikapKerja.ketekunan,
     sikapKerja.dayaTahanStres,
+    sikapKerja.orientasiCustomer || 4,
     kepribadian.kematanganEmosi,
     kepribadian.kemasakanSosial,
     kepribadian.rasaPercayaDiri,
@@ -40,7 +41,7 @@ export function PreviewPsikogramManajer({ state }: PreviewPsikogramManajerProps)
     kepemimpinan.pengambilanKeputusan,
     kepemimpinan.pengembanganKaryawan
   ];
-  const greyCalc = calculateGreyAreaScore(managerScores, 5);
+  const greyCalc = calculateGreyAreaScore(managerScores, MANAGER_ASPECT_TARGETS);
 
   const exportToDocx = () => {
     const element = document.getElementById('psikogram-preview-manajer');
@@ -74,20 +75,20 @@ export function PreviewPsikogramManajer({ state }: PreviewPsikogramManajerProps)
     return val === expected ? '✪' : '';
   };
 
-  const renderRow = (no: string, title: string, desc: string, val: number) => (
+  const renderRow = (no: string, title: string, desc: string, val: number, target: number = 5) => (
     <tr className="text-xs">
       <td className="border border-black px-1 py-1 align-top text-center border-t-2 w-[5%]">{no}.</td>
       <td className="border border-black px-2 py-1 align-top border-t-2">
         <span className="font-semibold block">{title}</span>
         <span className="text-[9px] leading-tight text-gray-700">{desc}</span>
       </td>
-      <td className="border border-black p-1 text-center font-bold text-sm h-6 border-t-2 w-[6%]">{getStar(val, 1)}</td>
-      <td className="border border-black p-1 text-center font-bold text-sm h-6 border-t-2 w-[6%]">{getStar(val, 2)}</td>
-      <td className="border border-black p-1 text-center font-bold text-sm h-6 border-t-2 w-[6%]">{getStar(val, 3)}</td>
-      <td className="border border-black p-1 text-center font-bold text-sm h-6 border-t-2 w-[6%]">{getStar(val, 4)}</td>
-      <td className="border border-black p-1 text-center font-bold text-sm h-6 border-t-2 w-[6%] bg-gray-200">{getStar(val, 5)}</td>
-      <td className="border border-black p-1 text-center font-bold text-sm h-6 border-t-2 w-[6%]">{getStar(val, 6)}</td>
-      <td className="border border-black p-1 text-center font-bold text-sm h-6 border-t-2 w-[6%]">{getStar(val, 7)}</td>
+      <td className={`border border-black p-1 text-center font-bold text-sm h-6 border-t-2 w-[6%] ${target === 1 ? 'bg-gray-200' : ''}`}>{getStar(val, 1)}</td>
+      <td className={`border border-black p-1 text-center font-bold text-sm h-6 border-t-2 w-[6%] ${target === 2 ? 'bg-gray-200' : ''}`}>{getStar(val, 2)}</td>
+      <td className={`border border-black p-1 text-center font-bold text-sm h-6 border-t-2 w-[6%] ${target === 3 ? 'bg-gray-200' : ''}`}>{getStar(val, 3)}</td>
+      <td className={`border border-black p-1 text-center font-bold text-sm h-6 border-t-2 w-[6%] ${target === 4 ? 'bg-gray-200' : ''}`}>{getStar(val, 4)}</td>
+      <td className={`border border-black p-1 text-center font-bold text-sm h-6 border-t-2 w-[6%] ${target === 5 ? 'bg-gray-200' : ''}`}>{getStar(val, 5)}</td>
+      <td className={`border border-black p-1 text-center font-bold text-sm h-6 border-t-2 w-[6%] ${target === 6 ? 'bg-gray-200' : ''}`}>{getStar(val, 6)}</td>
+      <td className={`border border-black p-1 text-center font-bold text-sm h-6 border-t-2 w-[6%] ${target === 7 ? 'bg-gray-200' : ''}`}>{getStar(val, 7)}</td>
     </tr>
   );
 
@@ -228,15 +229,15 @@ export function PreviewPsikogramManajer({ state }: PreviewPsikogramManajerProps)
                   <td className="border border-black p-1 text-center font-bold text-sm h-6 w-[6%]">{getStar(intelektual.potensiKecerdasan, 6)}</td>
                   <td className="border border-black p-1 text-center font-bold text-sm h-6 w-[6%]">{getStar(intelektual.potensiKecerdasan, 7)}</td>
                 </tr>
-                {renderRow('2', 'Berpikir Sistematis', 'Kemampuan berpikir runtut untuk memahami rangkaian suatu permasalahan yang berkesinambungan.', intelektual.berpikirSistematis)}
-                {renderRow('3', 'Pemahaman Verbal', 'Kemampuan memahami suatu arahan dan instruksi untuk mengerti penjelasan.', intelektual.pemahamanVerbal)}
-                {renderRow('4', 'Analisa-Sintesa', 'Kemampuan untuk menghubungkan dua atau lebih permasalahan yang serupa.', intelektual.analisaSintesa)}
-                {renderRow('5', 'Pemahaman konsep', 'Kemampuan memahami suatu prinsip untuk diterapkan ke dalam situasi yang berbeda.', intelektual.pemahamanKonsep)}
-                {renderRow('6', 'Kemampuan Numerik', 'Kemampuan dalam menerapkan konsep aritmatik dan berpikir logis dengan menggunakan angka-angka.', intelektual.kemampuanNumerik)}
+                {renderRow('2', 'Berpikir Sistematis', 'Kemampuan berpikir runtut untuk memahami rangkaian suatu permasalahan yang berkesinambungan.', intelektual.berpikirSistematis, 5)}
+                {renderRow('3', 'Pemahaman Verbal', 'Kemampuan memahami suatu arahan dan instruksi untuk mengerti penjelasan.', intelektual.pemahamanVerbal, 5)}
+                {renderRow('4', 'Analisa-Sintesa', 'Kemampuan untuk menghubungkan dua atau lebih permasalahan yang serupa.', intelektual.analisaSintesa, 5)}
+                {renderRow('5', 'Pemahaman konsep', 'Kemampuan memahami suatu prinsip untuk diterapkan ke dalam situasi yang berbeda.', intelektual.pemahamanKonsep, 5)}
+                {renderRow('6', 'Kemampuan Numerik', 'Kemampuan dalam menerapkan konsep aritmatik dan berpikir logis dengan menggunakan angka-angka.', intelektual.kemampuanNumerik, 4)}
 
                 {/* 2. SIKAP KERJA */}
                 <tr>
-                  <td className="border-x border-t-2 border-black bg-gray-200 uppercase font-bold text-[10px] text-center" rowSpan={4} style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)' }}>
+                  <td className="border-x border-t-2 border-black bg-gray-200 uppercase font-bold text-[10px] text-center" rowSpan={5} style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)' }}>
                     SIKAP KERJA
                   </td>
                   <td className="border border-black px-1 py-1 align-top text-center border-t-2 w-[5%]">1.</td>
@@ -247,14 +248,15 @@ export function PreviewPsikogramManajer({ state }: PreviewPsikogramManajerProps)
                   <td className="border border-black p-1 text-center font-bold text-sm h-6 border-t-2">{getStar(sikapKerja.kecepatan, 1)}</td>
                   <td className="border border-black p-1 text-center font-bold text-sm h-6 border-t-2">{getStar(sikapKerja.kecepatan, 2)}</td>
                   <td className="border border-black p-1 text-center font-bold text-sm h-6 border-t-2">{getStar(sikapKerja.kecepatan, 3)}</td>
-                  <td className="border border-black p-1 text-center font-bold text-sm h-6 border-t-2">{getStar(sikapKerja.kecepatan, 4)}</td>
-                  <td className="border border-black p-1 text-center font-bold text-sm h-6 border-t-2 bg-gray-200">{getStar(sikapKerja.kecepatan, 5)}</td>
+                  <td className="border border-black p-1 text-center font-bold text-sm h-6 border-t-2 bg-gray-200">{getStar(sikapKerja.kecepatan, 4)}</td>
+                  <td className="border border-black p-1 text-center font-bold text-sm h-6 border-t-2">{getStar(sikapKerja.kecepatan, 5)}</td>
                   <td className="border border-black p-1 text-center font-bold text-sm h-6 border-t-2">{getStar(sikapKerja.kecepatan, 6)}</td>
                   <td className="border border-black p-1 text-center font-bold text-sm h-6 border-t-2">{getStar(sikapKerja.kecepatan, 7)}</td>
                 </tr>
-                {renderRow('2', 'Ketelitian', 'Cermat dan hati-hati dalam bekerja.', sikapKerja.ketelitian)}
-                {renderRow('3', 'Ketekunan atau Keuletan', 'Sabar dan tahan dengan tugas rutin serta tidak mudah bosan.', sikapKerja.ketekunan)}
-                {renderRow('4', 'Daya Tahan terhadap Stres', 'Kemampuan menghasilkan performance kerja yang stabil dalam situasi yang penuh dengan tekanan.', sikapKerja.dayaTahanStres)}
+                {renderRow('2', 'Ketelitian', 'Cermat dan hati-hati dalam bekerja.', sikapKerja.ketelitian, 4)}
+                {renderRow('3', 'Ketekunan atau Keuletan', 'Sabar dan tahan dengan tugas rutin serta tidak mudah bosan.', sikapKerja.ketekunan, 4)}
+                {renderRow('4', 'Daya Tahan terhadap Stres', 'Kemampuan menghasilkan performance kerja yang stabil dalam situasi yang penuh dengan tekanan.', sikapKerja.dayaTahanStres, 4)}
+                {renderRow('5', 'Orientasi Customer atau Pelanggan', 'Memberikan pelayanan yang tepat dan efisien kepada nasabah dan berusaha untuk mengerti serta memenuhi kebutuhan nasabah.', sikapKerja.orientasiCustomer || 4, 4)}
 
                 {/* 3. KEPRIBADIAN */}
                 <tr>
@@ -274,14 +276,14 @@ export function PreviewPsikogramManajer({ state }: PreviewPsikogramManajerProps)
                   <td className="border border-black p-1 text-center font-bold text-sm h-6 border-t-2">{getStar(kepribadian.kematanganEmosi, 6)}</td>
                   <td className="border border-black p-1 text-center font-bold text-sm h-6 border-t-2">{getStar(kepribadian.kematanganEmosi, 7)}</td>
                 </tr>
-                {renderRow('2', 'Kemasakan Sosial', 'Peka atau tanggap terhadap perasaan dan kebutuhan orang lain di lingkungan sosial.', kepribadian.kemasakanSosial)}
-                {renderRow('3', 'Rasa Percaya Diri', 'Adanya keyakinan yang kuat terhadap kemampuan yang dimiliki.', kepribadian.rasaPercayaDiri)}
-                {renderRow('4', 'Motivasi Berprestasi', 'Dorongan melakukan pekerjaan secara maksimal serta berusaha untuk mencapai hasil sebaik mungkin.', kepribadian.motivasiBerprestasi)}
-                {renderRow('5', 'Sikap Mandiri', 'Kemampuan melakukan aktivitas sendiri dan inisiatif sendiri tanpa tergantung oleh dukungan dari orang lain.', kepribadian.sikapMandiri)}
-                {renderRow('6', 'Inisiatif', 'Penggunaan sebuah pendekatan baru atau pun unik untuk melaksanakan pekerjaan dan mengupayakan proses perubahan.', kepribadian.inisiatif)}
-                {renderRow('7', 'Kemampuan Bekerjasama', 'Kemampuan menyelesaikan tugas bersama dengan orang lain / kelompok, secara kooperatif dan ada kesediaan untuk proaktif.', kepribadian.kemampuanBekerjasama)}
-                {renderRow('8', 'Keterampilan Berkomunikasi', 'Kemampuan mengekspresikan ide / pikirannya secara runtut dan terarah, serta persuasif.', kepribadian.keterampilanBerkomunikasi)}
-                {renderRow('9', 'Loyalitas', 'Kesediaan untuk mencurahkan waktu dan tenaga untuk bekerja serta bertindak konsisten sesuai dengan kebijakan organisasi.', kepribadian.loyalitas)}
+                {renderRow('2', 'Kemasakan Sosial', 'Peka atau tanggap terhadap perasaan dan kebutuhan orang lain di lingkungan sosial.', kepribadian.kemasakanSosial, 4)}
+                {renderRow('3', 'Rasa Percaya Diri', 'Adanya keyakinan yang kuat terhadap kemampuan yang dimiliki.', kepribadian.rasaPercayaDiri, 4)}
+                {renderRow('4', 'Motivasi Berprestasi', 'Dorongan melakukan pekerjaan secara maksimal serta berusaha untuk mencapai hasil sebaik mungkin.', kepribadian.motivasiBerprestasi, 5)}
+                {renderRow('5', 'Sikap Mandiri', 'Kemampuan melakukan aktivitas sendiri dan inisiatif sendiri tanpa tergantung oleh dukungan dari orang lain.', kepribadian.sikapMandiri, 5)}
+                {renderRow('6', 'Inisiatif', 'Penggunaan sebuah pendekatan baru atau pun unik untuk melaksanakan pekerjaan dan mengupayakan proses perubahan.', kepribadian.inisiatif, 5)}
+                {renderRow('7', 'Kemampuan Bekerjasama', 'Kemampuan menyelesaikan tugas bersama dengan orang lain / kelompok, secara kooperatif dan ada kesediaan untuk proaktif.', kepribadian.kemampuanBekerjasama, 5)}
+                {renderRow('8', 'Keterampilan Berkomunikasi', 'Kemampuan mengekspresikan ide / pikirannya secara runtut dan terarah, serta persuasif.', kepribadian.keterampilanBerkomunikasi, 5)}
+                {renderRow('9', 'Loyalitas', 'Kesediaan untuk mencurahkan waktu dan tenaga untuk bekerja serta bertindak konsisten sesuai dengan kebijakan organisasi.', kepribadian.loyalitas, 5)}
 
                 {/* 4. KEPEMIMPINAN (ASPEK TAMBAHAN KHUSUS MANAJER - TES MSDT) */}
                 <tr>
@@ -301,9 +303,9 @@ export function PreviewPsikogramManajer({ state }: PreviewPsikogramManajerProps)
                   <td className="border border-black p-1 text-center font-bold text-sm h-6 border-t-2 w-[6%]">{getStar(kepemimpinan.kepemimpinan, 6)}</td>
                   <td className="border border-black p-1 text-center font-bold text-sm h-6 border-t-2 w-[6%]">{getStar(kepemimpinan.kepemimpinan, 7)}</td>
                 </tr>
-                {renderRow('2', 'Tanggungjawab', 'Kesediaan bertanggung jawab atas hasil kerjanya dan orang lain yang dipimpin.', kepemimpinan.tanggungjawab)}
-                {renderRow('3', 'Pengambilan Keputusan', 'Kemampuan memilih suatu tindakan dari beberapa alternatif tindakan secara sistematis sebagai cara pemecahan masalah.', kepemimpinan.pengambilanKeputusan)}
-                {renderRow('4', 'Pengembangan Karyawan', 'Kemampuan dalam memberdayakan bawahan melalui pemberian wewenang serta memberikan kesempatan untuk meningkatkan kompetensinya.', kepemimpinan.pengembanganKaryawan)}
+                {renderRow('2', 'Tanggungjawab', 'Kesediaan bertanggung jawab atas hasil kerjanya dan orang lain yang dipimpin.', kepemimpinan.tanggungjawab, 5)}
+                {renderRow('3', 'Pengambilan Keputusan', 'Kemampuan memilih suatu tindakan dari beberapa alternatif tindakan secara sistematis sebagai cara pemecahan masalah.', kepemimpinan.pengambilanKeputusan, 5)}
+                {renderRow('4', 'Pengembangan Karyawan', 'Kemampuan dalam memberdayakan bawahan melalui pemberian wewenang serta memberikan kesempatan untuk meningkatkan kompetensinya.', kepemimpinan.pengembanganKaryawan, 5)}
               </tbody>
             </table>
             
@@ -314,7 +316,7 @@ export function PreviewPsikogramManajer({ state }: PreviewPsikogramManajerProps)
             {/* CARA MENGHITUNG PSIKOGRAM (GUIDE BRILIAN PSIKOLOGI) */}
             <div className="border-2 border-t-0 border-black p-1.5 bg-gray-50 flex justify-between items-center text-[10px]">
               <div>
-                <span className="font-bold">Kesesuaian Standar Manajerial (Grey Area RA): </span>
+                <span className="font-bold">Kesesuaian Standar Manajerial: </span>
                 <span>({greyCalc.totalAspek} Aspek - {greyCalc.diBawahGreyArea} di bawah standar) / {greyCalc.totalAspek} = <span className="font-bold text-xs">{greyCalc.persentase}%</span></span>
               </div>
               <div>

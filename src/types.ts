@@ -262,6 +262,14 @@ export interface ManagerKepemimpinan {
   pengembanganKaryawan: ScaleLevel;
 }
 
+export interface ManagerSikapKerja {
+  kecepatan: ScaleLevel;
+  ketelitian: ScaleLevel;
+  ketekunan: ScaleLevel;
+  dayaTahanStres: ScaleLevel;
+  orientasiCustomer?: ScaleLevel;
+}
+
 export interface ManagerAppState {
   clientData: StaffClientData;
   iqScore: number | '';
@@ -288,7 +296,7 @@ export interface ManagerAppState {
     kemampuanNumerik: string;
   };
   intelektual: StaffIntelektual;
-  sikapKerja: StaffSikapKerja;
+  sikapKerja: ManagerSikapKerja;
   kepribadian: StaffKepribadian;
   kepemimpinan: ManagerKepemimpinan;
   dinamikaPsikologis: string;
@@ -343,6 +351,7 @@ export const INITIAL_MANAGER_STATE: ManagerAppState = {
     ketelitian: 4,
     ketekunan: 4,
     dayaTahanStres: 4,
+    orientasiCustomer: 4,
   },
   kepribadian: {
     kematanganEmosi: 4,
