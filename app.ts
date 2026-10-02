@@ -389,7 +389,7 @@ const purgeHandler = async (req: express.Request, res: express.Response) => {
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const folders = ['ist', 'kraepelin', 'papi', 'mbti', 'bei', 'documents', 'markitdown', 'psikotes', ''];
+    const folders = ['ist', 'kraepelin', 'papi', 'mbti', 'msdt', 'bei', 'documents', 'markitdown', 'psikotes', ''];
     const deletedFiles: string[] = [];
 
     for (const folder of folders) {
@@ -826,6 +826,138 @@ Jika data MBTI tidak ditemukan, kembalikan data kepribadian sebelumnya saja tanp
   } catch (error: any) {
     console.error('Error parsing MBTI:', error);
     res.status(500).json({ error: error?.message || 'Gagal mengekstrak data MBTI' });
+  }
+});
+
+// MSDT Test extraction
+apiRouter.post("/extract-msdt", async (req, res) => {
+  try {
+    const { data, filename, text } = req.body;
+    const mimeType = normalizeMimeType(req.body.mimeType, filename, data);
+    
+    if (!data && !text) {
+      return res.status(400).json({ error: 'Data file atau teks dokumen tidak ditemukan' });
+    }
+    
+    const prompt = `Anda adalah seorang psikolog dan asesor profesional ahli psikometri yang sangat teliti dalam membaca hasil tes MSDT (Management Style Diagnostic Test / Gaya Kepemimpinan W.J. Reddin) atau lembar asesmen manajerial.
+Tugas Anda adalah:
+1. Ekstrak data biodata peserta (nama, tempat tanggal lahir, jenis kelamin, pendidikan, nomor peserta, tujuan pemeriksaan/posisi jabatan, nama PT/perusahaan).
+2. Analisis hasil tes MSDT peserta dari dokumen yang diberikan (berupa gambar/PDF grafik profil MSDT, lembar skoring, laporan psikotes, atau transkrip). Dokumen mungkin berisi:
+   - Skor dimensi TO (Task Orientation), RO (Relationships Orientation), dan E (Effectiveness).
+   - Tipe gaya kepemimpinan (Executive, Developer, Benevolent Autocrat, Bureaucrat, Compromiser, Missionary, Autocrat, Deserter).
+   - Tabel penilaian kompetensi kepemimpinan.
+3. Petakan dan tentukan nilai taraf 1 sampai 7 (1=KS / Kurang Sekali, 2=K / Kurang, 3=RB / Rata-rata Bawah, 4=R / Rata-rata, 5=RA / Rata-rata Atas, 6=B / Baik, 7=BS / Baik Sekali) untuk 4 aspek Kepemimpinan berikut:
+   1. Kepemimpinan: "Memproyeksikan dirinya sebagai pemimpin dan mencoba menggunakan orang lain untuk mencapai tujuannya."
+      - Taraf tinggi (5-7): Orientasi tugas & wibawa kepemimpinan kuat, gaya Executive atau Benevolent Autocrat, mampu mengarahkan tim dengan mantap dan tegas.
+      - Taraf sedang (4): Mampu memimpin tim standar sesuai tugas yang diberikan.
+      - Taraf rendah (1-3): Kurang percaya diri memimpin orang lain, pasif, atau cenderung menghindar (Deserter / Missionary lemah).
+   2. Tanggungjawab: "Kesediaan bertanggung jawab atas hasil kerjanya dan orang lain yang dipimpin."
+      - Taraf tinggi (5-7): Komitmen tinggi terhadap hasil tim, akuntabilitas kuat, gaya Executive / Benevolent Autocrat / Bureaucrat berintegritas.
+      - Taraf sedang (4): Bertanggung jawab atas tugas rutin sendiri dan tim.
+      - Taraf rendah (1-3): Kurang akuntabel atau melempar kesalahan pada situasi/bawahan (Deserter).
+   3. Pengambilan Keputusan: "Kemampuan memilih suatu tindakan dari beberapa alternatif tindakan secara sistematis sebagai cara pemecahan masalah."
+      - Taraf tinggi (5-7): Cepat, tepat, dan sistematis dalam memutuskan tindakan di bawah ketidakpastian; gaya Executive / Benevolent Autocrat.
+      - Taraf sedang (4): Mampu mengambil keputusan pada situasi kerja umum.
+      - Taraf rendah (1-3): Ragu-ragu, kompromistis tanpa prinsip (Compromiser), lambat atau takut resiko.
+   4. Pengembangan Karyawan: "Kemampuan dalam memberdayakan bawahan melalui pemberian wewenang serta memberikan kesempatan untuk meningkatkan kompetensinya."
+      - Taraf tinggi (5-7): Orientasi hubungan (RO) tinggi & berdaya guna, gaya Developer atau Executive, aktif melatih, mendelegasikan, dan memotivasi bawahan.
+      - Taraf sedang (4): Memberikan arahan standar dan mendelegasikan tugas rutin.
+      - Taraf rendah (1-3): Cenderung one-man show (Autocrat kaku) atau acuh tak acuh terhadap peningkatan kompetensi bawahan (Deserter).
+
+=== ATURAN PRIORITAS TABEL LANGSUNG ===
+JIKA di dalam dokumen sudah tercantum secara eksplisit tabel atau teks kategori/skor langsung untuk "Kepemimpinan", "Tanggungjawab", "Pengambilan Keputusan", dan "Pengembangan Karyawan" (atau istilah serupa seperti Leadership, Responsibility, Decision Making, People Development):
+- BACA DAN PRIORITASKAN NILAI TERSEBUT LANGSUNG (konversikan ke skala 1-7: KS=1, K=2, RB=3, R=4, RA=5, B=6, BS=7 atau Sangat Rendah=1 s/d Sangat Tinggi=7).
+
+Kembalikan HANYA format JSON valid persis seperti ini (tanpa markdown \`\`\`json):
+{
+  "clientData": {
+    "nama": "Nama lengkap peserta jika tertera",
+    "tempatTglLahir": "Tempat dan tanggal lahir lengkap jika tertera",
+    "jenisKelamin": "Laki-laki atau Perempuan atau kosong",
+    "pendidikan": "Pendidikan jika tertera",
+    "nomor": "Nomor tes/peserta jika tertera",
+    "alamat": "Alamat jika tertera",
+    "tujuanPemeriksaan": "Posisi / jabatan manajerial jika tertera",
+    "namaPT": "Nama PT / perusahaan jika tertera"
+  },
+  "kepemimpinan": {
+    "kepemimpinan": 4,
+    "tanggungjawab": 4,
+    "pengambilanKeputusan": 4,
+    "pengembanganKaryawan": 4
+  },
+  "rawDetails": {
+    "gayaKepemimpinan": "Gaya kepemimpinan utama terdeteksi (misal: Executive / Developer dll beserta skor TO/RO/E jika ada)",
+    "kepemimpinan": "Penjelasan singkat analisis / dasar skor aspek kepemimpinan",
+    "tanggungjawab": "Penjelasan singkat analisis / dasar skor aspek tanggung jawab",
+    "pengambilanKeputusan": "Penjelasan singkat analisis / dasar skor aspek pengambilan keputusan",
+    "pengembanganKaryawan": "Penjelasan singkat analisis / dasar skor aspek pengembangan karyawan"
+  }
+}
+
+Jika data biodata tidak ditemukan, gunakan string kosong "".
+Nilai kepemimpinan, tanggungjawab, pengambilanKeputusan, pengembanganKaryawan WAJIB berupa angka integer 1 sampai 7.`;
+
+    const parsed = await callUnifiedAI({
+      req,
+      prompt,
+      data,
+      mimeType,
+      text,
+      fallback: {}
+    });
+
+    const parseLevel = (val: any) => {
+      if (typeof val === 'number') {
+        if (val >= 1 && val <= 7) return Math.round(val);
+        if (val >= 16) return 7;
+        if (val >= 14) return 6;
+        if (val >= 12) return 5;
+        if (val >= 8) return 4;
+        if (val >= 6) return 3;
+        if (val >= 4) return 2;
+        if (val >= 1) return 1;
+        return 4;
+      }
+      const s = String(val || '').trim().toLowerCase();
+      if (!s) return 4;
+      if (/\b(sangat tinggi|baik sekali|sangat baik|bs|st|sb)\b/i.test(s)) return 7;
+      if (/\b(kurang sekali|sangat rendah|ks|sr)\b/i.test(s)) return 1;
+      if (/\b(rata[- ]*rata bawah|cukup bawah|rb|cb)\b/i.test(s)) return 3;
+      if (/\b(rata[- ]*rata atas|cukup atas|ra|ca)\b/i.test(s)) return 5;
+      if (/\b(baik|tinggi|\bb\b|\bt\b)\b/i.test(s)) return 6;
+      if (/\b(kurang|rendah|\bk\b)\b/i.test(s)) return 2;
+      if (/\b(sedang|rata[- ]*rata|cukup|\br\b|\bs\b|\bc\b)\b/i.test(s)) return 4;
+      const num = parseInt(s, 10);
+      return !isNaN(num) && num >= 1 && num <= 7 ? num : 4;
+    };
+
+    const kData = parsed?.kepemimpinan || parsed?.aspekKepemimpinan || parsed || {};
+    const normalizedResponse = {
+      clientData: {
+        nama: parsed?.clientData?.nama || '',
+        tempatTglLahir: parsed?.clientData?.tempatTglLahir || '',
+        pendidikan: parsed?.clientData?.pendidikan || '',
+        alamat: parsed?.clientData?.alamat || '',
+        nomor: parsed?.clientData?.nomor || '',
+        jenisKelamin: parsed?.clientData?.jenisKelamin || '',
+        tujuanPemeriksaan: parsed?.clientData?.tujuanPemeriksaan || '',
+        tanggalTes: parsed?.clientData?.tanggalTes || '',
+        namaPT: parsed?.clientData?.namaPT || ''
+      },
+      kepemimpinan: {
+        kepemimpinan: parseLevel(kData.kepemimpinan ?? kData.leadership),
+        tanggungjawab: parseLevel(kData.tanggungjawab ?? kData.tanggung_jawab ?? kData.responsibility),
+        pengambilanKeputusan: parseLevel(kData.pengambilanKeputusan ?? kData.pengambilan_keputusan ?? kData.decisionMaking),
+        pengembanganKaryawan: parseLevel(kData.pengembanganKaryawan ?? kData.pengembangan_karyawan ?? kData.developingOthers)
+      },
+      rawDetails: parsed?.rawDetails || parsed?.raw_details || {}
+    };
+
+    res.json(normalizedResponse);
+  } catch (error: any) {
+    console.error('Error parsing MSDT:', error);
+    res.status(500).json({ error: error?.message || 'Gagal mengekstrak data MSDT' });
   }
 });
 

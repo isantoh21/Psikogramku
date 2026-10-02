@@ -255,6 +255,116 @@ export const INITIAL_STAFF_STATE: StaffAppState = {
   dinamikaPsikologis: '',
 };
 
+export interface ManagerKepemimpinan {
+  kepemimpinan: ScaleLevel;
+  tanggungjawab: ScaleLevel;
+  pengambilanKeputusan: ScaleLevel;
+  pengembanganKaryawan: ScaleLevel;
+}
+
+export interface ManagerAppState {
+  clientData: StaffClientData;
+  iqScore: number | '';
+  iqLabel: string;
+  istSubscores?: {
+    SE: number | '';
+    WA: number | '';
+    AN: number | '';
+    GE: number | '';
+    ME: number | '';
+    RA: number | '';
+    ZR: number | '';
+    FA: number | '';
+    WU: number | '';
+  };
+  aspekScores?: {
+    pemahamanVerbal: number | '';
+    analisaSintesa: number | '';
+    kemampuanNumerik: number | '';
+  };
+  aspekKategori?: {
+    pemahamanVerbal: string;
+    analisaSintesa: string;
+    kemampuanNumerik: string;
+  };
+  intelektual: StaffIntelektual;
+  sikapKerja: StaffSikapKerja;
+  kepribadian: StaffKepribadian;
+  kepemimpinan: ManagerKepemimpinan;
+  dinamikaPsikologis: string;
+  msdtDetails?: Record<string, string>;
+}
+
+export const INITIAL_MANAGER_STATE: ManagerAppState = {
+  clientData: {
+    nama: '',
+    tempatTglLahir: '',
+    pendidikan: '',
+    alamat: '',
+    nomor: '',
+    jenisKelamin: '',
+    tujuanPemeriksaan: '',
+    tanggalTes: '',
+    namaPT: '',
+  },
+  iqScore: '',
+  iqLabel: '',
+  istSubscores: {
+    SE: '',
+    WA: '',
+    AN: '',
+    GE: '',
+    ME: '',
+    RA: '',
+    ZR: '',
+    FA: '',
+    WU: '',
+  },
+  aspekScores: {
+    pemahamanVerbal: '',
+    analisaSintesa: '',
+    kemampuanNumerik: '',
+  },
+  aspekKategori: {
+    pemahamanVerbal: '',
+    analisaSintesa: '',
+    kemampuanNumerik: '',
+  },
+  intelektual: {
+    potensiKecerdasan: 4,
+    berpikirSistematis: 4,
+    pemahamanVerbal: 4,
+    analisaSintesa: 4,
+    pemahamanKonsep: 4,
+    kemampuanNumerik: 4,
+  },
+  sikapKerja: {
+    kecepatan: 4,
+    ketelitian: 4,
+    ketekunan: 4,
+    dayaTahanStres: 4,
+  },
+  kepribadian: {
+    kematanganEmosi: 4,
+    kemasakanSosial: 4,
+    rasaPercayaDiri: 4,
+    motivasiBerprestasi: 4,
+    sikapMandiri: 4,
+    inisiatif: 4,
+    kemampuanBekerjasama: 4,
+    keterampilanBerkomunikasi: 4,
+    loyalitas: 4,
+  },
+  kepemimpinan: {
+    kepemimpinan: 4,
+    tanggungjawab: 4,
+    pengambilanKeputusan: 4,
+    pengembanganKaryawan: 4,
+  },
+  dinamikaPsikologis: '',
+  msdtDetails: {},
+};
+
 export const INITIAL_SD_STATE: SdAppState = {
   clientData: {
     nama: '',

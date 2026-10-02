@@ -735,3 +735,39 @@ export const getStaffScaleFullLabel = (level: number): string => {
   return fulls[level - 1] || 'Rata-rata (R)';
 };
 
+/**
+ * CARA MENGHITUNG PSIKOGRAM (GUIDE INTERPRETER BRILIAN PSIKOLOGI):
+ * Dihitung jumlah seluruh aspek di psikogram, kemudian dikurangi nilai yg
+ * mendapatkan nilai dibawah grey area, kemudian dibagi jumlah seluruh aspek.
+ * Misal: seluruh aspek = 19 dan dibawah grey area = 5 -> (19-5)/19 = 73%
+ * Untuk Manajer: seluruh aspek = 23, grey area = RA (skor 5). Nilai < 5 adalah di bawah grey area.
+ */
+export const calculateGreyAreaScore = (scores: number[], greyAreaBenchmark = 5) => {
+  const totalAspek = scores.length || 1;
+  const diBawahGreyArea = scores.filter(s => (s || 4) < greyAreaBenchmark).length;
+  const memenuhiGreyArea = totalAspek - diBawahGreyArea;
+  const persentase = Math.round((memenuhiGreyArea / totalAspek) * 100);
+
+  let status = 'Disarankan';
+  let badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+  if (persentase < 60) {
+    status = 'Tidak Disarankan';
+    badgeColor = 'bg-rose-100 text-rose-800 border-rose-300';
+  } else if (persentase < 75) {
+    status = 'Dipertimbangkan';
+    badgeColor = 'bg-amber-100 text-amber-800 border-amber-300';
+  } else if (persentase >= 85) {
+    status = 'Sangat Disarankan';
+    badgeColor = 'bg-blue-100 text-blue-800 border-blue-300';
+  }
+
+  return {
+    totalAspek,
+    diBawahGreyArea,
+    memenuhiGreyArea,
+    persentase,
+    status,
+    badgeColor
+  };
+};
+

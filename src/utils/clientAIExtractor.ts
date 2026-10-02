@@ -533,6 +533,264 @@ Kembalikan HANYA format JSON valid persis seperti ini (tanpa markdown \`\`\`json
   "loyalitas": { "situation": "", "task": "", "action": "", "result": "" }
 }`;
 
+export const MSDT_PROMPT = `Anda adalah seorang psikolog dan asesor profesional ahli psikometri yang sangat teliti dalam membaca hasil tes MSDT (Management Style Diagnostic Test / Gaya Kepemimpinan W.J. Reddin) atau lembar asesmen manajerial.
+Tugas Anda adalah:
+1. Ekstrak data biodata peserta (nama, tempat tanggal lahir, jenis kelamin, pendidikan, nomor peserta, tujuan pemeriksaan/posisi jabatan, nama PT/perusahaan).
+2. Analisis hasil tes MSDT peserta dari dokumen yang diberikan (berupa gambar/PDF grafik profil MSDT, lembar skoring, laporan psikotes, atau transkrip). Dokumen mungkin berisi:
+   - Skor dimensi TO (Task Orientation), RO (Relationships Orientation), dan E (Effectiveness).
+   - Tipe gaya kepemimpinan (Executive, Developer, Benevolent Autocrat, Bureaucrat, Compromiser, Missionary, Autocrat, Deserter).
+   - Tabel penilaian kompetensi kepemimpinan.
+3. Petakan dan tentukan nilai taraf 1 sampai 7 (1=KS / Kurang Sekali, 2=K / Kurang, 3=RB / Rata-rata Bawah, 4=R / Rata-rata, 5=RA / Rata-rata Atas, 6=B / Baik, 7=BS / Baik Sekali) untuk 4 aspek Kepemimpinan berikut:
+   1. Kepemimpinan: "Memproyeksikan dirinya sebagai pemimpin dan mencoba menggunakan orang lain untuk mencapai tujuannya."
+      - Taraf tinggi (5-7): Orientasi tugas & wibawa kepemimpinan kuat, gaya Executive atau Benevolent Autocrat, mampu mengarahkan tim dengan mantap dan tegas.
+      - Taraf sedang (4): Mampu memimpin tim standar sesuai tugas yang diberikan.
+      - Taraf rendah (1-3): Kurang percaya diri memimpin orang lain, pasif, atau cenderung menghindar (Deserter / Missionary lemah).
+   2. Tanggungjawab: "Kesediaan bertanggung jawab atas hasil kerjanya dan orang lain yang dipimpin."
+      - Taraf tinggi (5-7): Komitmen tinggi terhadap hasil tim, akuntabilitas kuat, gaya Executive / Benevolent Autocrat / Bureaucrat berintegritas.
+      - Taraf sedang (4): Bertanggung jawab atas tugas rutin sendiri dan tim.
+      - Taraf rendah (1-3): Kurang akuntabel atau melempar kesalahan pada situasi/bawahan (Deserter).
+   3. Pengambilan Keputusan: "Kemampuan memilih suatu tindakan dari beberapa alternatif tindakan secara sistematis sebagai cara pemecahan masalah."
+      - Taraf tinggi (5-7): Cepat, tepat, dan sistematis dalam memutuskan tindakan di bawah ketidakpastian; gaya Executive / Benevolent Autocrat.
+      - Taraf sedang (4): Mampu mengambil keputusan pada situasi kerja umum.
+      - Taraf rendah (1-3): Ragu-ragu, kompromistis tanpa prinsip (Compromiser), lambat atau takut resiko.
+   4. Pengembangan Karyawan: "Kemampuan dalam memberdayakan bawahan melalui pemberian wewenang serta memberikan kesempatan untuk meningkatkan kompetensinya."
+      - Taraf tinggi (5-7): Orientasi hubungan (RO) tinggi & berdaya guna, gaya Developer atau Executive, aktif melatih, mendelegasikan, dan memotivasi bawahan.
+      - Taraf sedang (4): Memberikan arahan standar dan mendelegasikan tugas rutin.
+      - Taraf rendah (1-3): Cenderung one-man show (Autocrat kaku) atau acuh tak acuh terhadap peningkatan kompetensi bawahan (Deserter).
+
+=== ATURAN PRIORITAS TABEL LANGSUNG ===
+JIKA di dalam dokumen sudah tercantum secara eksplisit tabel atau teks kategori/skor langsung untuk "Kepemimpinan", "Tanggungjawab", "Pengambilan Keputusan", dan "Pengembangan Karyawan" (atau istilah serupa seperti Leadership, Responsibility, Decision Making, People Development):
+- BACA DAN PRIORITASKAN NILAI TERSEBUT LANGSUNG (konversikan ke skala 1-7: KS=1, K=2, RB=3, R=4, RA=5, B=6, BS=7 atau Sangat Rendah=1 s/d Sangat Tinggi=7).
+
+Kembalikan HANYA format JSON valid persis seperti ini (tanpa markdown \`\`\`json):
+{
+  "clientData": {
+    "nama": "Nama lengkap peserta jika tertera",
+    "tempatTglLahir": "Tempat dan tanggal lahir lengkap jika tertera",
+    "jenisKelamin": "Laki-laki atau Perempuan atau kosong",
+    "pendidikan": "Pendidikan jika tertera",
+    "nomor": "Nomor tes/peserta jika tertera",
+    "alamat": "Alamat jika tertera",
+    "tujuanPemeriksaan": "Posisi / jabatan manajerial jika tertera",
+    "namaPT": "Nama PT / perusahaan jika tertera"
+  },
+  "kepemimpinan": {
+    "kepemimpinan": 4,
+    "tanggungjawab": 4,
+    "pengambilanKeputusan": 4,
+    "pengembanganKaryawan": 4
+  },
+  "rawDetails": {
+    "gayaKepemimpinan": "Gaya kepemimpinan utama terdeteksi (misal: Executive / Developer dll beserta skor TO/RO/E jika ada)",
+    "kepemimpinan": "Penjelasan singkat analisis / dasar skor aspek kepemimpinan",
+    "tanggungjawab": "Penjelasan singkat analisis / dasar skor aspek tanggung jawab",
+    "pengambilanKeputusan": "Penjelasan singkat analisis / dasar skor aspek pengambilan keputusan",
+    "pengembanganKaryawan": "Penjelasan singkat analisis / dasar skor aspek pengembangan karyawan"
+  }
+}
+
+Jika data biodata tidak ditemukan, gunakan string kosong "".
+Nilai kepemimpinan, tanggungjawab, pengambilanKeputusan, pengembanganKaryawan WAJIB berupa angka integer 1 sampai 7.`;
+
+export interface NormalizedMsdtResult {
+  clientData: {
+    nama: string;
+    tempatTglLahir: string;
+    pendidikan: string;
+    alamat: string;
+    nomor: string;
+    jenisKelamin: 'Laki-laki' | 'Perempuan' | '';
+    tujuanPemeriksaan: string;
+    tanggalTes?: string;
+    namaPT: string;
+  };
+  kepemimpinan: {
+    kepemimpinan: number;
+    tanggungjawab: number;
+    pengambilanKeputusan: number;
+    pengembanganKaryawan: number;
+  };
+  rawDetails: Record<string, string>;
+}
+
+export function extractMsdtFromText(text: string): Partial<NormalizedMsdtResult> | null {
+  if (!text || (!text.includes('MSDT') && !text.includes('GAYA MANAJEMEN') && !text.includes('PSIKOGRAM MSDT'))) {
+    return null;
+  }
+
+  const extractField = (pattern: RegExp) => {
+    const m = text.match(pattern);
+    return m && m[1] ? m[1].trim() : '';
+  };
+
+  const nama = extractField(/Nama\s*[:]\s*(.*?)(?=\s+(?:Jenis Kelamin|Gender|Tanggal Lahir|Tgl|Pendidikan|Batch|Kode Peserta|Jabatan|Tanggal Tes|RINGKASAN|HASIL|$))/i);
+  const jkRaw = extractField(/(?:Jenis Kelamin|Gender)\s*[:]\s*(.*?)(?=\s+(?:Tanggal Lahir|Tgl|Pendidikan|Batch|Kode Peserta|Jabatan|Tanggal Tes|RINGKASAN|HASIL|$))/i);
+  const ttl = extractField(/(?:Tanggal Lahir|Tgl\.?\s*Lahir|Tempat\/Tgl\.?\s*Lahir)\s*[:]\s*(.*?)(?=\s+(?:Pendidikan|Batch|Kode Peserta|Jabatan|Tanggal Tes|RINGKASAN|HASIL|$))/i);
+  const pendidikan = extractField(/Pendidikan\s*[:]\s*(.*?)(?=\s+(?:Batch|Kode Peserta|Jabatan|Tanggal Tes|RINGKASAN|HASIL|$))/i);
+  const nomor = extractField(/(?:Kode Peserta|No\.?\s*Peserta|Nomor|NO\.?\s*REGISTRASI)\s*[:]\s*(.*?)(?=\s+(?:Jabatan|Posisi|Tanggal Tes|RINGKASAN|HASIL|$))/i);
+  const jabatan = extractField(/(?:Jabatan|Posisi|Tujuan Pemeriksaan)\s*[:]\s*(.*?)(?=\s+(?:Tanggal Tes|RINGKASAN|HASIL|$))/i);
+  const rawTanggalTes = extractField(/Tanggal Tes\s*[:]\s*(.*?)(?=\s+(?:RINGKASAN|HASIL|SKORING|$))/i);
+  const keterangan = extractField(/Keterangan\s*[:\s]+(.*?)(?=\s+(?:C\s*O\s*N\s*F\s*I\s*D\s*E\s*N\s*T\s*I\s*A\s*L|CONFIDENTIAL|RINGKASAN|NO\.\s*SURAT|$))/i);
+
+  let formattedTanggalTes = '';
+  if (rawTanggalTes) {
+    const months: Record<string, string> = {
+      januari: '01', februari: '02', maret: '03', april: '04', mei: '05', juni: '06',
+      juli: '07', agustus: '08', september: '09', oktober: '10', november: '11', desember: '12',
+      jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'
+    };
+    const dateParts = rawTanggalTes.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
+    if (dateParts) {
+      const day = dateParts[1].padStart(2, '0');
+      const mon = months[dateParts[2].toLowerCase()] || '01';
+      const year = dateParts[3];
+      formattedTanggalTes = `${year}-${mon}-${day}`;
+    }
+  }
+
+  const getStyleScore = (code: string): number | null => {
+    const regex = new RegExp(`\\b${code}\\b\\s+(\\d{1,2})`, 'i');
+    const match = text.match(regex);
+    if (match && match[1]) return parseInt(match[1], 10);
+    return null;
+  };
+
+  const ds = getStyleScore('Ds') ?? 6;
+  const mi = getStyleScore('Mi') ?? 7;
+  const au = getStyleScore('Au') ?? 9;
+  const co = getStyleScore('Co') ?? 7;
+  const bu = getStyleScore('Bu') ?? 8;
+  const dv = getStyleScore('Dv') ?? 12;
+  const ba = getStyleScore('Ba') ?? 11;
+  const e = getStyleScore('E') ?? 6;
+
+  const hasilMatch = text.match(/Hasil\s*[\n\r]+\s*([A-Za-z0-9\s\-]+?)(?:Kurang efektif|Efektif|Keterangan|$)/i) 
+    || text.match(/HASIL\s*[\n\r]+\s*([A-Za-z0-9]+)/i);
+  let dominantStyle = hasilMatch ? hasilMatch[1].trim() : '';
+  if (!dominantStyle && text.includes('Bu - Bureaucrat')) dominantStyle = 'Bu - Bureaucrat';
+
+  // 1. Kepemimpinan (Guide Hal 13 & Reddin MSDT: E, Ba vs Ds, Mi)
+  let kepemimpinan = 4;
+  if (ba >= 12 || e >= 10) kepemimpinan = 6;
+  else if (ba >= 10 || e >= 8) kepemimpinan = 5;
+  else if (ds >= 9 || mi >= 10) kepemimpinan = 3;
+  else if (ds >= 11) kepemimpinan = 2;
+  else kepemimpinan = 4;
+
+  // 2. Tanggungjawab (Guide Hal 7 & Reddin: Bu, Ba, E akuntabilitas tinggi vs Ds lepas tangan)
+  let tanggungjawab = 4;
+  if ((bu >= 8 && ba >= 9) || e >= 9) tanggungjawab = 5;
+  else if (bu >= 10 && ba >= 11) tanggungjawab = 6;
+  else if (ds >= 10) tanggungjawab = 2;
+  else if (ds >= 8) tanggungjawab = 3;
+  else tanggungjawab = 4;
+
+  // 3. Pengambilan Keputusan (Guide: sistematis, tegas vs Co bimbang, Ds menghindar)
+  let pengambilanKeputusan = 4;
+  if (ba >= 10 && co <= 8) pengambilanKeputusan = 5;
+  else if (ba >= 12 && co <= 7) pengambilanKeputusan = 6;
+  else if (co >= 10 || ds >= 9) pengambilanKeputusan = 3;
+  else if (co >= 12) pengambilanKeputusan = 2;
+  else pengambilanKeputusan = 4;
+
+  // 4. Pengembangan Karyawan (Guide Hal 6 & 13: Developer / Dv & Papi P kaderisasi bawahan)
+  let pengembanganKaryawan = 4;
+  if (dv >= 12) pengembanganKaryawan = 6; // Baik (proaktif mendukung bawahan)
+  else if (dv >= 10) pengembanganKaryawan = 5; // Rata-rata Atas
+  else if (dv >= 8) pengembanganKaryawan = 4; // Rata-rata
+  else if (dv >= 6) pengembanganKaryawan = 3; // Rata-rata Bawah
+  else if (dv >= 4) pengembanganKaryawan = 2; // Kurang
+  else pengembanganKaryawan = 1;
+
+  let jenisKelamin: 'Laki-laki' | 'Perempuan' | '' = '';
+  if (jkRaw) {
+    if (/pria|laki/i.test(jkRaw)) jenisKelamin = 'Laki-laki';
+    else if (/wanita|perempuan/i.test(jkRaw)) jenisKelamin = 'Perempuan';
+  }
+
+  return {
+    clientData: {
+      nama,
+      tempatTglLahir: ttl,
+      pendidikan,
+      alamat: '',
+      nomor,
+      jenisKelamin,
+      tujuanPemeriksaan: jabatan || 'Manager',
+      tanggalTes: formattedTanggalTes,
+      namaPT: text.includes('Brilian') ? 'Brilian Psikologi' : ''
+    },
+    kepemimpinan: {
+      kepemimpinan,
+      tanggungjawab,
+      pengambilanKeputusan,
+      pengembanganKaryawan
+    },
+    rawDetails: {
+      gayaKepemimpinan: dominantStyle ? `${dominantStyle} (Dv:${dv}, Ba:${ba}, Au:${au}, Bu:${bu}, Mi:${mi}, Co:${co}, Ds:${ds}, E:${e})` : `Dv:${dv}, Ba:${ba}, Au:${au}, Bu:${bu}`,
+      kepemimpinan: `Orientasi kepemimpinan aktif Ba=${ba}, Au=${au}, E=${e}`,
+      tanggungjawab: `Akuntabilitas & kepatuhan prosedural Bu=${bu}, Ba=${ba}`,
+      pengambilanKeputusan: `Pengambilan keputusan terstruktur & sistematis (Ba=${ba}, Bu=${bu}, Co=${co})`,
+      pengembanganKaryawan: `Skor Developer (Dv)=${dv} (Efektif: fokus pemberdayaan dan pembinaan kompetensi bawahan)`,
+      keterangan: keterangan || ''
+    }
+  };
+}
+
+export function normalizeMsdtResult(data: any): NormalizedMsdtResult {
+  const safeData = data || {};
+  const cData = safeData.clientData || {};
+  const kData = safeData.kepemimpinan || safeData.aspekKepemimpinan || safeData;
+  const rawD = safeData.rawDetails || safeData.raw_details || safeData.details || {};
+
+  const deterministic = safeData.text ? extractMsdtFromText(safeData.text) : null;
+  const dClient: any = deterministic?.clientData || {};
+  const dKep: any = deterministic?.kepemimpinan || {};
+  const dRaw: any = deterministic?.rawDetails || {};
+
+  let extractedPT = String(cData.namaPT || cData.nama_pt || cData.perusahaan || cData.pt || safeData.namaPT || safeData.nama_pt || dClient.namaPT || '').trim();
+  if (!extractedPT && safeData.text) {
+    extractedPT = extractCompanyNameFromText(safeData.text);
+  }
+
+  const parseScore = (val: any, defaultVal = 4): number => {
+    return parseSikapKerjaLevel(val, defaultVal);
+  };
+
+  const rawJk = cData.jenisKelamin || dClient.jenisKelamin || '';
+  let finalJk: 'Laki-laki' | 'Perempuan' | '' = '';
+  if (rawJk === 'Laki-laki' || rawJk === 'Perempuan') finalJk = rawJk;
+  else if (/pria|laki/i.test(rawJk)) finalJk = 'Laki-laki';
+  else if (/wanita|perempuan/i.test(rawJk)) finalJk = 'Perempuan';
+
+  return {
+    clientData: {
+      nama: String(cData.nama || dClient.nama || safeData.nama || '').trim(),
+      tempatTglLahir: String(cData.tempatTglLahir || dClient.tempatTglLahir || cData.ttl || safeData.tempatTglLahir || safeData.ttl || '').trim(),
+      pendidikan: String(cData.pendidikan || dClient.pendidikan || safeData.pendidikan || '').trim(),
+      alamat: String(cData.alamat || safeData.alamat || '').trim(),
+      nomor: String(cData.nomor || dClient.nomor || safeData.nomor || '').trim(),
+      jenisKelamin: finalJk,
+      tujuanPemeriksaan: String(cData.tujuanPemeriksaan || dClient.tujuanPemeriksaan || cData.posisi || cData.jabatan || safeData.tujuanPemeriksaan || safeData.posisi || '').trim(),
+      tanggalTes: String(cData.tanggalTes || dClient.tanggalTes || safeData.tanggalTes || '').trim(),
+      namaPT: extractedPT,
+    },
+    kepemimpinan: {
+      kepemimpinan: parseScore(kData.kepemimpinan ?? kData.leadership ?? dKep.kepemimpinan ?? safeData.kepemimpinan, 4),
+      tanggungjawab: parseScore(kData.tanggungjawab ?? kData.tanggung_jawab ?? kData.responsibility ?? dKep.tanggungjawab ?? safeData.tanggungjawab, 4),
+      pengambilanKeputusan: parseScore(kData.pengambilanKeputusan ?? kData.pengambilan_keputusan ?? kData.decisionMaking ?? dKep.pengambilanKeputusan ?? safeData.pengambilanKeputusan, 4),
+      pengembanganKaryawan: parseScore(kData.pengembanganKaryawan ?? kData.pengembangan_karyawan ?? kData.developingOthers ?? dKep.pengembanganKaryawan ?? safeData.pengembanganKaryawan, 4)
+    },
+    rawDetails: {
+      gayaKepemimpinan: String(rawD.gayaKepemimpinan || rawD.gaya || rawD.style || dRaw.gayaKepemimpinan || '').trim(),
+      kepemimpinan: String(rawD.kepemimpinan || dRaw.kepemimpinan || '').trim(),
+      tanggungjawab: String(rawD.tanggungjawab || rawD.tanggung_jawab || dRaw.tanggungjawab || '').trim(),
+      pengambilanKeputusan: String(rawD.pengambilanKeputusan || rawD.pengambilan_keputusan || dRaw.pengambilanKeputusan || '').trim(),
+      pengembanganKaryawan: String(rawD.pengembanganKaryawan || rawD.pengembangan_karyawan || dRaw.pengembanganKaryawan || '').trim()
+    }
+  };
+}
+
 /**
  * Universal Unified Extraction Runner:
  * 1. Checks if direct client-side AI is available.
