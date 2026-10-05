@@ -415,3 +415,112 @@ export const INITIAL_SD_STATE: SdAppState = {
   learningStyle: '',
   rekomendasi: '',
 };
+
+export interface StaffAluCfitScores {
+  sub1: number | ''; // Subtes 1: Berpikir sistematis (0-13)
+  sub2: number | ''; // Subtes 2: Berpikir kritis (0-14)
+  sub3: number | ''; // Subtes 3: Analisa-sintesa (0-13)
+  sub4: number | ''; // Subtes 4: Pemahaman konsep (0-10)
+  totalScore?: number | '';
+}
+
+export interface StaffAluTkdScores {
+  sub3: number | ''; // Subtes 3: Pemahaman verbal, logika berpikir, daya abstraksi (SS 0-20)
+  sub5: number | ''; // Subtes 5: Kemampuan berhitung, ketelitian (SS 0-20)
+  sub7: number | ''; // Subtes 7: Kemampuan berpikir analogi, berpikir kritis (SS 0-20)
+}
+
+export interface StaffAluAppState {
+  clientData: StaffClientData;
+  iqScore: number | '';
+  iqLabel: string;
+  cfitScores: StaffAluCfitScores;
+  tkdScores: StaffAluTkdScores;
+  aspekScores?: {
+    berpikirSistematis: number | '';
+    pemahamanVerbal: number | '';
+    analisaSintesa: number | '';
+    pemahamanKonsep: number | '';
+    kemampuanNumerik: number | '';
+  };
+  aspekKategori?: {
+    berpikirSistematis: string;
+    pemahamanVerbal: string;
+    analisaSintesa: string;
+    pemahamanKonsep: string;
+    kemampuanNumerik: string;
+  };
+  intelektual: StaffIntelektual;
+  sikapKerja: StaffSikapKerja;
+  kepribadian: StaffKepribadian;
+  dinamikaPsikologis: string;
+}
+
+export const INITIAL_STAFF_ALU_STATE: StaffAluAppState = {
+  clientData: {
+    nama: '',
+    tempatTglLahir: '',
+    pendidikan: '',
+    alamat: '',
+    nomor: '',
+    jenisKelamin: '',
+    tujuanPemeriksaan: '',
+    tanggalTes: '',
+    namaPT: 'PT. ALAM LESTARI UNGGUL',
+  },
+  iqScore: '',
+  iqLabel: '',
+  cfitScores: {
+    sub1: '',
+    sub2: '',
+    sub3: '',
+    sub4: '',
+    totalScore: '',
+  },
+  tkdScores: {
+    sub3: '',
+    sub5: '',
+    sub7: '',
+  },
+  aspekScores: {
+    berpikirSistematis: '',
+    pemahamanVerbal: '',
+    analisaSintesa: '',
+    pemahamanKonsep: '',
+    kemampuanNumerik: '',
+  },
+  aspekKategori: {
+    berpikirSistematis: '',
+    pemahamanVerbal: '',
+    analisaSintesa: '',
+    pemahamanKonsep: '',
+    kemampuanNumerik: '',
+  },
+  intelektual: {
+    potensiKecerdasan: 4,
+    berpikirSistematis: 4,
+    pemahamanVerbal: 4,
+    analisaSintesa: 4,
+    pemahamanKonsep: 4,
+    kemampuanNumerik: 4,
+  },
+  sikapKerja: {
+    kecepatan: 4,
+    ketelitian: 4,
+    ketekunan: 4,
+    dayaTahanStres: 4,
+  },
+  kepribadian: {
+    kematanganEmosi: 4,
+    kemasakanSosial: 4,
+    rasaPercayaDiri: 4,
+    motivasiBerprestasi: 4,
+    sikapMandiri: 4,
+    inisiatif: 4,
+    kemampuanBekerjasama: 4,
+    keterampilanBerkomunikasi: 4,
+    loyalitas: 4,
+  },
+  dinamikaPsikologis: '',
+};
+

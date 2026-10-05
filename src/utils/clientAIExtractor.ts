@@ -225,6 +225,76 @@ CATATAN PENTING:
 2. Untuk subtes IST (SE, WA, AN, GE, ME, RA, ZR, FA, WU): ambil nilai Standard Wert (SW) atau nilai skor tertera untuk masing-masing subtes jika ada.
 3. Jika data tertentu tidak ditemukan, beri nilai null atau string kosong "".`;
 
+export const CFIT_STAFF_PROMPT = `Ekstrak data hasil tes CFIT (Culture Fair Intelligence Test) dan biodata dari dokumen laporan/skoring psikotes ini.
+Kembalikan HANYA format JSON valid persis seperti template di bawah ini (tanpa markdown \`\`\`json):
+{
+  "clientData": {
+    "nama": "nama lengkap peserta",
+    "tempatTglLahir": "tempat dan tanggal lahir (misal: 'Jakarta, 1 Januari 1995')",
+    "jenisKelamin": "Laki-laki atau Perempuan atau kosong",
+    "nomor": "nomor peserta/tes",
+    "tanggalTes": "YYYY-MM-DD",
+    "pendidikan": "pendidikan terakhir",
+    "tujuanPemeriksaan": "posisi/jabatan/tujuan pemeriksaan",
+    "namaPT": "nama PT / perusahaan jika tertera"
+  },
+  "iqScore": 0,
+  "iqLabel": "kategori IQ CFIT seperti Very Superior, Superior, Rata-rata Atas, Rata-rata, Rata-rata Bawah, Borderline, Intellectual Deficient",
+  "cfitSubscores": {
+    "sub1": 0,
+    "sub2": 0,
+    "sub3": 0,
+    "sub4": 0,
+    "totalScore": 0
+  }
+}
+
+CATATAN PENTING:
+1. sub1 adalah Subtes 1 (Seri / Berpikir Sistematis), nilai benar (0-13).
+2. sub2 adalah Subtes 2 (Klasifikasi / Berpikir Kritis), nilai benar (0-14).
+3. sub3 adalah Subtes 3 (Matriks / Analisa-Sintesa), nilai benar (0-13).
+4. sub4 adalah Subtes 4 (Topologi/Persyaratan / Pemahaman Konsep), nilai benar (0-10).
+5. totalScore adalah total nilai mentah (RS) jika ada.
+6. iqScore adalah skor IQ CFIT (misal: 105, 118, 125, dsb).
+7. Jika data tertentu tidak ditemukan, beri nilai null atau string kosong "".`;
+
+export const TKD_PROMPT = `Ekstrak data hasil tes TKD (Tes Kemampuan Dasar) dan biodata dari dokumen laporan/skoring psikotes ini.
+Kembalikan HANYA format JSON valid persis seperti template di bawah ini (tanpa markdown \`\`\`json):
+{
+  "clientData": {
+    "nama": "nama lengkap peserta",
+    "tempatTglLahir": "tempat dan tanggal lahir",
+    "jenisKelamin": "Laki-laki atau Perempuan atau kosong",
+    "nomor": "nomor peserta/tes",
+    "tanggalTes": "YYYY-MM-DD",
+    "pendidikan": "pendidikan",
+    "tujuanPemeriksaan": "jabatan/posisi",
+    "namaPT": "nama PT / perusahaan jika tertera"
+  },
+  "tkdSubscores": {
+    "sub3": 0,
+    "sub5": 0,
+    "sub7": 0
+  },
+  "tkdRawScores": {
+    "sub3": null,
+    "sub5": null,
+    "sub7": null
+  },
+  "tkdCategories": {
+    "sub3": "kategori / taraf subtes 3 jika tertera (misal: R, S, T, Baik, dll)",
+    "sub5": "kategori / taraf subtes 5 jika tertera",
+    "sub7": "kategori / taraf subtes 7 jika tertera"
+  }
+}
+
+CATATAN PENTING:
+1. TKD Subtes 3: Pemahaman verbal, logika berpikir, daya abstraksi (prioritaskan Standard Score / SS skala 0-20 jika ada, atau nilai benar).
+2. TKD Subtes 5: Kemampuan berhitung, ketelitian (prioritaskan Standard Score / SS skala 0-20).
+3. TKD Subtes 7: Kemampuan berpikir analogi, kemampuan berpikir kritis (prioritaskan Standard Score / SS skala 0-20).
+4. Jika ada tabel skor standar (SS) atau angka setelah norma, masukkan ke tkdSubscores. Jika ada skor mentah (RS), masukkan ke tkdRawScores.
+5. Jika data tertentu tidak ditemukan, beri nilai null atau string kosong "".`;
+
 export const KRAEPELIN_PROMPT = `Anda adalah seorang psikolog dan ahli psikometri profesional yang sangat teliti dalam membaca hasil tes psikotes Kraepelin / Pauli / Sikap Kerja.
 Tugas Anda adalah mengekstrak data biodata peserta (termasuk NAMA PT / PERUSAHAAN jika tertera di dokumen, kop surat, header laporan, atau tabel identitas) dan nilai 4 dimensi Sikap Kerja dari dokumen yang diberikan (berupa gambar tabel, grafik kurva kerja Kraepelin, lembar skoring, laporan psikotes, atau teks).
 

@@ -717,6 +717,160 @@ export const calculateGuidePemahamanKonsep = (score: number | string | undefined
   return 1;              // KS (Kurang Sekali)
 };
 
+/**
+ * Pedoman Skoring IQ CFIT (Guide Interpreter Brilian Psikologi):
+ * 130 ke atas : Very Superior (BS = 7)
+ * 120 - 129   : Superior (B = 6)
+ * 110 - 119   : Rata-rata Atas (RA = 5)
+ * 90 - 109    : Rata-rata (R = 4)
+ * 80 - 89     : Rata-rata Bawah (RB = 3)
+ * 70 - 79     : Borderline (K = 2)
+ * Kurang dari 69 (<= 69) : Intellectual Deficient (KS = 1)
+ */
+export const mapCfitIQToLevel = (score: number | string | undefined | null): ScaleLevel => {
+  if (score === undefined || score === null || score === '') return 4;
+  const iq = Number(score);
+  if (isNaN(iq)) return 4;
+  if (iq >= 130) return 7;
+  if (iq >= 120) return 6;
+  if (iq >= 110) return 5;
+  if (iq >= 90) return 4;
+  if (iq >= 80) return 3;
+  if (iq >= 70) return 2;
+  return 1;
+};
+
+export const mapCfitIQToLabel = (score: number | string | undefined | null): string => {
+  if (score === undefined || score === null || score === '') return '';
+  const iq = Number(score);
+  if (isNaN(iq)) return '';
+  if (iq >= 130) return 'Very Superior';
+  if (iq >= 120) return 'Superior';
+  if (iq >= 110) return 'Rata-rata Atas';
+  if (iq >= 90) return 'Rata-rata';
+  if (iq >= 80) return 'Rata-rata Bawah';
+  if (iq >= 70) return 'Borderline';
+  return 'Intellectual Deficient';
+};
+
+/**
+ * CFIT Subtes 1 : Berpikir Sistematis (Nilai benar: 0-13)
+ * 11-13 : Baik (11-12) / Baik sekali (13)
+ * 9-10  : Rata-rata atas (RA = 5)
+ * 7-8   : Rata-rata (R = 4)
+ * 5-6   : Rata-rata bawah (RB = 3)
+ * 3-4   : Kurang (K = 2)
+ * 0-2   : Kurang sekali (KS = 1)
+ */
+export const calculateCfitSub1 = (score: number | string | undefined | null): ScaleLevel => {
+  if (score === undefined || score === null || score === '') return 4;
+  const s = Math.round(Number(score));
+  if (isNaN(s)) return 4;
+  if (s >= 13) return 7;
+  if (s >= 11) return 6;
+  if (s >= 9) return 5;
+  if (s >= 7) return 4;
+  if (s >= 5) return 3;
+  if (s >= 3) return 2;
+  return 1;
+};
+
+/**
+ * CFIT Subtes 2 : Berpikir Kritis (Nilai benar: 0-14)
+ * 11-14 : Baik (11-13) / Baik sekali (14)
+ * 9-10  : Rata-rata atas (RA = 5)
+ * 7-8   : Rata-rata (R = 4)
+ * 5-6   : Rata-rata bawah (RB = 3)
+ * 3-4   : Kurang (K = 2)
+ * 0-2   : Kurang sekali (KS = 1)
+ */
+export const calculateCfitSub2 = (score: number | string | undefined | null): ScaleLevel => {
+  if (score === undefined || score === null || score === '') return 4;
+  const s = Math.round(Number(score));
+  if (isNaN(s)) return 4;
+  if (s >= 14) return 7;
+  if (s >= 11) return 6;
+  if (s >= 9) return 5;
+  if (s >= 7) return 4;
+  if (s >= 5) return 3;
+  if (s >= 3) return 2;
+  return 1;
+};
+
+/**
+ * CFIT Subtes 3 : Analisa-sintesa (Nilai benar: 0-13)
+ * 11-13 : Baik (11-12) / Baik sekali (13)
+ * 9-10  : Rata-rata atas (RA = 5)
+ * 7-8   : Rata-rata (R = 4)
+ * 5-6   : Rata-rata bawah (RB = 3)
+ * 3-4   : Kurang (K = 2)
+ * 0-2   : Kurang sekali (KS = 1)
+ */
+export const calculateCfitSub3 = (score: number | string | undefined | null): ScaleLevel => {
+  if (score === undefined || score === null || score === '') return 4;
+  const s = Math.round(Number(score));
+  if (isNaN(s)) return 4;
+  if (s >= 13) return 7;
+  if (s >= 11) return 6;
+  if (s >= 9) return 5;
+  if (s >= 7) return 4;
+  if (s >= 5) return 3;
+  if (s >= 3) return 2;
+  return 1;
+};
+
+/**
+ * CFIT Subtes 4 : Pemahaman Konsep (Nilai benar: 0-10)
+ * 9-10 : Baik sekali (BS = 7)
+ * 7-8  : Baik (B = 6)
+ * 6    : Rata-rata atas (RA = 5)
+ * 5    : Rata-rata (R = 4)
+ * 4    : Rata-rata bawah (RB = 3)
+ * 2-3  : Kurang (K = 2)
+ * 0-1  : Kurang sekali (KS = 1)
+ */
+export const calculateCfitSub4 = (score: number | string | undefined | null): ScaleLevel => {
+  if (score === undefined || score === null || score === '') return 4;
+  const s = Math.round(Number(score));
+  if (isNaN(s)) return 4;
+  if (s >= 9) return 7;
+  if (s >= 7) return 6;
+  if (s === 6) return 5;
+  if (s === 5) return 4;
+  if (s === 4) return 3;
+  if (s >= 2) return 2;
+  return 1;
+};
+
+/**
+ * Norma TKD (Tes Kemampuan Dasar) - Berdasarkan Guide Interpreter Brilian Psikologi:
+ * Nilai benar SS setelah lihat norma:
+ * 16 - 20 : Baik Sekali (BS = 7)
+ * 12 - 15 : Baik (B = 6)
+ * 9 - 11  : Rata-rata Atas (RA = 5)
+ * 7 - 8   : Rata-rata (R = 4)
+ * 5 - 6   : Rata-rata Bawah (RB = 3)
+ * 3 - 4   : Kurang (K = 2)
+ * 0 - 2   : Kurang Sekali (KS = 1)
+ *
+ * Pemetaan Subtes TKD:
+ * - Subtes 3 : Pemahaman verbal, logika berpikir, daya abstraksi -> Pemahaman Verbal
+ * - Subtes 5 : Kemampuan berhitung, ketelitian -> Kemampuan Numerik
+ * - Subtes 7 : Kemampuan berpikir analogi, kemampuan berpikir kritis
+ */
+export const calculateTkdScoreToLevel = (score: number | string | undefined | null): ScaleLevel => {
+  if (score === undefined || score === null || score === '') return 4;
+  const s = Math.round(Number(score));
+  if (isNaN(s)) return 4;
+  if (s >= 16) return 7;
+  if (s >= 12) return 6;
+  if (s >= 9) return 5;
+  if (s >= 7) return 4;
+  if (s >= 5) return 3;
+  if (s >= 3) return 2;
+  return 1;
+};
+
 export const getStaffScaleCode = (level: number): string => {
   const codes = ['KS', 'K', 'RB', 'R', 'RA', 'B', 'BS'];
   return codes[level - 1] || 'R';
