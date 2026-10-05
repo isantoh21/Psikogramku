@@ -238,25 +238,42 @@ Kembalikan HANYA format JSON valid persis seperti template di bawah ini (tanpa m
     "tujuanPemeriksaan": "posisi/jabatan/tujuan pemeriksaan",
     "namaPT": "nama PT / perusahaan jika tertera"
   },
-  "iqScore": 0,
+  "iqScore": null,
   "iqLabel": "kategori IQ CFIT seperti Very Superior, Superior, Rata-rata Atas, Rata-rata, Rata-rata Bawah, Borderline, Intellectual Deficient",
   "cfitSubscores": {
-    "sub1": 0,
-    "sub2": 0,
-    "sub3": 0,
-    "sub4": 0,
-    "totalScore": 0
+    "sub1": null,
+    "sub2": null,
+    "sub3": null,
+    "sub4": null,
+    "totalScore": null
+  },
+  "cfitCategories": {
+    "sub1": "taraf/kategori subtes 1 jika ada (misal: 'Rata-rata', 'R', 'Sedang', 'Baik', 'Cukup')",
+    "sub2": "taraf/kategori subtes 2 jika ada",
+    "sub3": "taraf/kategori subtes 3 jika ada (misal: 'Rata-rata', 'R', 'Sedang', 'Baik', 'Cukup')",
+    "sub4": "taraf/kategori subtes 4 jika ada (misal: 'Rata-rata', 'R', 'Sedang', 'Baik', 'Cukup')"
   }
 }
 
-CATATAN PENTING:
-1. sub1 adalah Subtes 1 (Seri / Berpikir Sistematis), nilai benar (0-13).
-2. sub2 adalah Subtes 2 (Klasifikasi / Berpikir Kritis), nilai benar (0-14).
-3. sub3 adalah Subtes 3 (Matriks / Analisa-Sintesa), nilai benar (0-13).
-4. sub4 adalah Subtes 4 (Topologi/Persyaratan / Pemahaman Konsep), nilai benar (0-10).
-5. totalScore adalah total nilai mentah (RS) jika ada.
-6. iqScore adalah skor IQ CFIT (misal: 105, 118, 125, dsb).
-7. Jika data tertentu tidak ditemukan, beri nilai null atau string kosong "".`;
+CATATAN PENTING & PEDOMAN NORMA CFIT:
+1. Skor IQ CFIT:
+   - >= 130 : Very Superior
+   - 120 - 129 : Superior
+   - 110 - 119 : Rata-rata Atas
+   - 90 - 109 : Rata-rata (misal IQ 106 adalah RATA-RATA!)
+   - 80 - 89 : Rata-rata Bawah
+   - 70 - 79 : Borderline
+   - < 70 : Intellectual Deficient
+2. Subtes CFIT:
+   - sub1 = Subtes 1 (Seri / Berpikir Sistematis), nilai benar (0-13).
+   - sub2 = Subtes 2 (Klasifikasi / Berpikir Kritis), nilai benar (0-14).
+   - sub3 = Subtes 3 (Matriks / Analisa-Sintesa), nilai benar (0-13).
+   - sub4 = Subtes 4 (Topologi/Persyaratan / Pemahaman Konsep), nilai benar (0-10).
+3. PERINGATAN KRUSIAL: JANGAN PERNAH mengisi nilai subtes dengan angka 0 jika dokumen tidak secara eksplisit menyatakan nilainya 0! Jika peserta memiliki IQ 106 (Rata-rata), maka kemampuan kognitifnya berada pada taraf Rata-rata (bukan Kurang Sekali).
+4. Jika dokumen hanya menampilkan Skor IQ (misal 106) dan Total Nilai Benar (RS, misal 26-28), dan tidak merinci subtes satu per satu:
+   - Isi taraf/kategori di cfitCategories dengan "Rata-rata"
+   - Estimasi nilai subtes yang proporsional untuk IQ 106 (Subtes 1: 7-8, Subtes 2: 7-8, Subtes 3: 7-8, Subtes 4: 5).
+5. Jika data tertentu tidak ditemukan, beri nilai null atau string kosong "".`;
 
 export const TKD_PROMPT = `Ekstrak data hasil tes TKD (Tes Kemampuan Dasar) dan biodata dari dokumen laporan/skoring psikotes ini.
 Kembalikan HANYA format JSON valid persis seperti template di bawah ini (tanpa markdown \`\`\`json):
@@ -272,9 +289,9 @@ Kembalikan HANYA format JSON valid persis seperti template di bawah ini (tanpa m
     "namaPT": "nama PT / perusahaan jika tertera"
   },
   "tkdSubscores": {
-    "sub3": 0,
-    "sub5": 0,
-    "sub7": 0
+    "sub3": null,
+    "sub5": null,
+    "sub7": null
   },
   "tkdRawScores": {
     "sub3": null,
@@ -282,18 +299,27 @@ Kembalikan HANYA format JSON valid persis seperti template di bawah ini (tanpa m
     "sub7": null
   },
   "tkdCategories": {
-    "sub3": "kategori / taraf subtes 3 jika tertera (misal: R, S, T, Baik, dll)",
-    "sub5": "kategori / taraf subtes 5 jika tertera",
-    "sub7": "kategori / taraf subtes 7 jika tertera"
+    "sub3": "taraf / kategori subtes 3 (misal: 'Rata-rata', 'R', 'Sedang', 'Baik', 'Cukup')",
+    "sub5": "taraf / kategori subtes 5 (misal: 'Rata-rata', 'R', 'Sedang', 'Baik', 'Cukup')",
+    "sub7": "taraf / kategori subtes 7 (misal: 'Rata-rata', 'R', 'Sedang', 'Baik', 'Cukup')"
   }
 }
 
-CATATAN PENTING:
-1. TKD Subtes 3: Pemahaman verbal, logika berpikir, daya abstraksi (prioritaskan Standard Score / SS skala 0-20 jika ada, atau nilai benar).
-2. TKD Subtes 5: Kemampuan berhitung, ketelitian (prioritaskan Standard Score / SS skala 0-20).
-3. TKD Subtes 7: Kemampuan berpikir analogi, kemampuan berpikir kritis (prioritaskan Standard Score / SS skala 0-20).
-4. Jika ada tabel skor standar (SS) atau angka setelah norma, masukkan ke tkdSubscores. Jika ada skor mentah (RS), masukkan ke tkdRawScores.
-5. Jika data tertentu tidak ditemukan, beri nilai null atau string kosong "".`;
+CATATAN PENTING & PEDOMAN NORMA TKD:
+1. Subtes TKD yang dipetakan:
+   - TKD Subtes 3: Pemahaman verbal, logika berpikir, daya abstraksi -> Pemahaman Verbal
+   - TKD Subtes 5: Kemampuan berhitung, ketelitian -> Kemampuan Numerik
+   - TKD Subtes 7: Kemampuan berpikir analogi, kemampuan berpikir kritis
+2. Skor Standar (SS) norma TKD berada pada rentang 0-20:
+   - 16 - 20 : Baik Sekali (BS)
+   - 12 - 15 : Baik (B)
+   - 9 - 11  : Rata-rata Atas (RA)
+   - 7 - 8   : Rata-rata (R)
+   - 5 - 6   : Rata-rata Bawah (RB)
+   - 3 - 4   : Kurang (K)
+   - 0 - 2   : Kurang Sekali (KS)
+3. PERINGATAN: Jangan pernah mengisi subtes dengan angka 0 jika peserta tidak secara eksplisit memperoleh nilai 0. Jika dokumen memiliki kolom kategori/taraf (misal 'Sedang', 'Rata-rata', 'Cukup', 'Tinggi'), ekstrak teks tersebut ke dalam tkdCategories. Jika SS tidak tertera, masukkan estimasi nilai SS sesuai taraf (misal Rata-rata = SS 7-8).
+4. Jika data tertentu tidak ditemukan, beri nilai null atau string kosong "".`;
 
 export const KRAEPELIN_PROMPT = `Anda adalah seorang psikolog dan ahli psikometri profesional yang sangat teliti dalam membaca hasil tes psikotes Kraepelin / Pauli / Sikap Kerja.
 Tugas Anda adalah mengekstrak data biodata peserta (termasuk NAMA PT / PERUSAHAAN jika tertera di dokumen, kop surat, header laporan, atau tabel identitas) dan nilai 4 dimensi Sikap Kerja dari dokumen yang diberikan (berupa gambar tabel, grafik kurva kerja Kraepelin, lembar skoring, laporan psikotes, atau teks).

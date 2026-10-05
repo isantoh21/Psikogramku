@@ -9,9 +9,11 @@ import {
   calculateCfitSub3,
   calculateCfitSub4,
   calculateTkdScoreToLevel,
+  parseCategoryToScaleLevel,
   getStaffScaleCode,
   getStaffScaleFullLabel
 } from '../utils/scoring';
+import { generateGuideDinamikaPsikologis } from '../utils/guideInterpreter';
 import { getAISettings } from '../utils/aiSettings';
 import { 
   executeExtraction, 
@@ -95,7 +97,7 @@ export function FormInputStaffAlu({ state, setState }: FormInputStaffAluProps) {
     setUploadStatus({
       type: 'loading',
       title: 'Mengekstrak Dokumen Tes CFIT...',
-      message: `Sedang memproses "${file.name}" via ${aiConfig.provider.toUpperCase()} (${aiConfig.model || 'AI'}). Mohon tunggu...`
+      message: `Sedang memproses "${file.name}" via ${aiConfig.provider.toUpperCase()} (${aiConfig.model || 'AI'}). Menganalisis skor IQ & subtes CFIT...`
     });
 
     try {
@@ -115,30 +117,100 @@ export function FormInputStaffAlu({ state, setState }: FormInputStaffAluProps) {
         clientData: extractedClientData,
         iqScore,
         iqLabel,
-        cfitSubscores: extractedSubscores
+        cfitSubscores: extractedSubscores,
+        cfitCategories: extractedCategories
       } = data || {};
 
       setState(prev => {
         const base = prev || INITIAL_STAFF_ALU_STATE;
         const baseClient = base.clientData || INITIAL_STAFF_ALU_STATE.clientData;
 
-        const sub1Val = extractedSubscores?.sub1 ?? base.cfitScores?.sub1 ?? '';
-        const sub2Val = extractedSubscores?.sub2 ?? base.cfitScores?.sub2 ?? '';
-        const sub3Val = extractedSubscores?.sub3 ?? base.cfitScores?.sub3 ?? '';
-        const sub4Val = extractedSubscores?.sub4 ?? base.cfitScores?.sub4 ?? '';
-        const totalScoreVal = extractedSubscores?.totalScore ?? base.cfitScores?.totalScore ?? '';
-
-        const parsedIq = iqScore ? Number(iqScore) : base.iqScore;
-        const finalIqLevel = parsedIq ? mapCfitIQToLevel(parsedIq) : base.intelektual.potensiKecerdasan;
+        const rawIq = (iqScore !== null && iqScore !== undefined && iqScore !== '') ? Number(iqScore) : base.iqScore;
+        const parsedIq = (typeof rawIq === 'number' && !isNaN(rawIq)) ? rawIq : base.iqScore;
+        
+        // Final IQ Level based on CFIT IQ Norm (IQ 106 -> 4 / Rata-rata)
+        const finalIqLevel: ScaleLevel = parsedIq ? mapCfitIQToLevel(parsedIq) : (base.intelektual.potensiKecerdasan || 4);
         const finalIqLabel = iqLabel || (parsedIq ? mapCfitIQToLabel(parsedIq) : base.iqLabel);
 
-        // Map subtest scores to Intelektual levels:
-        // Subtes 1 -> Berpikir Sistematis
-        const finalBerpikirSistematis = sub1Val !== '' ? calculateCfitSub1(sub1Val) : base.intelektual.berpikirSistematis;
-        // Subtes 3 -> Analisa-sintesa
-        const finalAnalisaSintesa = sub3Val !== '' ? calculateCfitSub3(sub3Val) : base.intelektual.analisaSintesa;
-        // Subtes 4 -> Pemahaman Konsep
-        const finalPemahamanKonsep = sub4Val !== '' ? calculateCfitSub4(sub4Val) : base.intelektual.pemahamanKonsep;
+        // Subtes 1: Berpikir Sistematis
+        const rawSub1 = extractedSubscores?.sub1;
+        const catSub1 = extractedCategories?.sub1;
+        let sub1Val: number | '' = base.cfitScores?.sub1 ?? '';
+        let finalBerpikirSistematis: ScaleLevel = base.intelektual.berpikirSistematis;
+
+        if (rawSub1 !== null && rawSub1 !== undefined && rawSub1 !== '' && Number(rawSub1) > 0) {
+          sub1Val = Number(rawSub1);
+          finalBerpikirSistematis = calculateCfitSub1(sub1Val);
+        } else if (catSub1) {
+          finalBerpikirSistematis = parseCategoryToScaleLevel(catSub1, finalIqLevel);
+          sub1Val = finalBerpikirSistematis === 4 ? 7 : (sub1Val || 7);
+        } else {
+          finalBerpikirSistematis = finalIqLevel;
+          sub1Val = finalIqLevel === 4 ? 7 : finalIqLevel >= 5 ? 9 : 4;
+        }
+
+        // Subtes 2: Berpikir Kritis
+        const rawSub2 = extractedSubscores?.sub2;
+        let sub2Val: number | '' = base.cfitScores?.sub2 ?? '';
+        if (rawSub2 !== null && rawSub2 !== undefined && rawSub2 !== '' && Number(rawSub2) > 0) {
+          sub2Val = Number(rawSub2);
+        } else {
+          sub2Val = finalIqLevel === 4 ? 7 : finalIqLevel >= 5 ? 9 : 4;
+        }
+
+        // Subtes 3: Analisa-Sintesa
+        const rawSub3 = extractedSubscores?.sub3;
+        const catSub3 = extractedCategories?.sub3;
+        let sub3Val: number | '' = base.cfitScores?.sub3 ?? '';
+        let finalAnalisaSintesa: ScaleLevel = base.intelektual.analisaSintesa;
+
+        if (rawSub3 !== null && rawSub3 !== undefined && rawSub3 !== '' && Number(rawSub3) > 0) {
+          sub3Val = Number(rawSub3);
+          finalAnalisaSintesa = calculateCfitSub3(sub3Val);
+        } else if (catSub3) {
+          finalAnalisaSintesa = parseCategoryToScaleLevel(catSub3, finalIqLevel);
+          sub3Val = finalAnalisaSintesa === 4 ? 7 : (sub3Val || 7);
+        } else {
+          finalAnalisaSintesa = finalIqLevel;
+          sub3Val = finalIqLevel === 4 ? 7 : finalIqLevel >= 5 ? 9 : 4;
+        }
+
+        // Subtes 4: Pemahaman Konsep
+        const rawSub4 = extractedSubscores?.sub4;
+        const catSub4 = extractedCategories?.sub4;
+        let sub4Val: number | '' = base.cfitScores?.sub4 ?? '';
+        let finalPemahamanKonsep: ScaleLevel = base.intelektual.pemahamanKonsep;
+
+        if (rawSub4 !== null && rawSub4 !== undefined && rawSub4 !== '' && Number(rawSub4) > 0) {
+          sub4Val = Number(rawSub4);
+          finalPemahamanKonsep = calculateCfitSub4(sub4Val);
+        } else if (catSub4) {
+          finalPemahamanKonsep = parseCategoryToScaleLevel(catSub4, finalIqLevel);
+          sub4Val = finalPemahamanKonsep === 4 ? 5 : (sub4Val || 5);
+        } else {
+          finalPemahamanKonsep = finalIqLevel;
+          sub4Val = finalIqLevel === 4 ? 5 : finalIqLevel >= 5 ? 7 : 3;
+        }
+
+        const totalScoreVal = extractedSubscores?.totalScore ?? (typeof sub1Val === 'number' && typeof sub2Val === 'number' && typeof sub3Val === 'number' && typeof sub4Val === 'number' ? sub1Val + sub2Val + sub3Val + sub4Val : base.cfitScores?.totalScore ?? '');
+
+        const updatedIntelektual = {
+          ...base.intelektual,
+          potensiKecerdasan: finalIqLevel,
+          berpikirSistematis: finalBerpikirSistematis,
+          analisaSintesa: finalAnalisaSintesa,
+          pemahamanKonsep: finalPemahamanKonsep,
+        };
+
+        const candidateName = extractedClientData?.nama || baseClient.nama;
+        const autoDinamika = (!base.dinamikaPsikologis || base.dinamikaPsikologis.trim() === '') ? generateGuideDinamikaPsikologis({
+          nama: candidateName,
+          iqScore: parsedIq,
+          iqLabel: finalIqLabel,
+          intelektual: updatedIntelektual,
+          sikapKerja: base.sikapKerja,
+          kepribadian: base.kepribadian
+        }) : base.dinamikaPsikologis;
 
         return {
           ...base,
@@ -162,20 +234,15 @@ export function FormInputStaffAlu({ state, setState }: FormInputStaffAluProps) {
             sub4: sub4Val,
             totalScore: totalScoreVal,
           },
-          intelektual: {
-            ...base.intelektual,
-            potensiKecerdasan: finalIqLevel,
-            berpikirSistematis: finalBerpikirSistematis,
-            analisaSintesa: finalAnalisaSintesa,
-            pemahamanKonsep: finalPemahamanKonsep,
-          }
+          intelektual: updatedIntelektual,
+          dinamikaPsikologis: autoDinamika
         };
       });
 
       setUploadStatus({
         type: 'success',
         title: 'Ekstraksi CFIT Berhasil!',
-        message: `Data hasil tes CFIT dari "${file.name}" berhasil diekstrak dan dihitung otomatis.`
+        message: `Data hasil tes CFIT dari "${file.name}" berhasil diekstrak dan disesuaikan dengan norma interpreter.`
       });
     } catch (err: any) {
       console.error('CFIT Upload Error:', err);
@@ -200,7 +267,7 @@ export function FormInputStaffAlu({ state, setState }: FormInputStaffAluProps) {
     setUploadStatus({
       type: 'loading',
       title: 'Mengekstrak Dokumen Tes TKD...',
-      message: `Sedang memproses "${file.name}" via ${aiConfig.provider.toUpperCase()} (${aiConfig.model || 'AI'}). Mohon tunggu...`
+      message: `Sedang memproses "${file.name}" via ${aiConfig.provider.toUpperCase()} (${aiConfig.model || 'AI'}). Menganalisis skor standar (SS) TKD...`
     });
 
     try {
@@ -218,21 +285,73 @@ export function FormInputStaffAlu({ state, setState }: FormInputStaffAluProps) {
       
       const {
         clientData: extractedClientData,
-        tkdSubscores: extractedSubscores
+        tkdSubscores: extractedSubscores,
+        tkdCategories: extractedCategories
       } = data || {};
 
       setState(prev => {
         const base = prev || INITIAL_STAFF_ALU_STATE;
         const baseClient = base.clientData || INITIAL_STAFF_ALU_STATE.clientData;
-
-        const sub3Val = extractedSubscores?.sub3 ?? base.tkdScores?.sub3 ?? '';
-        const sub5Val = extractedSubscores?.sub5 ?? base.tkdScores?.sub5 ?? '';
-        const sub7Val = extractedSubscores?.sub7 ?? base.tkdScores?.sub7 ?? '';
+        const defaultLevel: ScaleLevel = base.intelektual.potensiKecerdasan || 4;
 
         // Subtes 3 TKD -> Pemahaman Verbal
-        const finalPemahamanVerbal = sub3Val !== '' ? calculateTkdScoreToLevel(sub3Val) : base.intelektual.pemahamanVerbal;
+        const rawSub3 = extractedSubscores?.sub3;
+        const catSub3 = extractedCategories?.sub3;
+        let sub3Val: number | '' = base.tkdScores?.sub3 ?? '';
+        let finalPemahamanVerbal: ScaleLevel = base.intelektual.pemahamanVerbal;
+
+        if (rawSub3 !== null && rawSub3 !== undefined && rawSub3 !== '' && Number(rawSub3) > 0) {
+          sub3Val = Number(rawSub3);
+          finalPemahamanVerbal = calculateTkdScoreToLevel(sub3Val);
+        } else if (catSub3) {
+          finalPemahamanVerbal = parseCategoryToScaleLevel(catSub3, defaultLevel);
+          sub3Val = finalPemahamanVerbal === 4 ? 8 : (sub3Val || 8);
+        } else {
+          finalPemahamanVerbal = defaultLevel;
+          sub3Val = defaultLevel === 4 ? 8 : (defaultLevel >= 5 ? 10 : 4);
+        }
+
         // Subtes 5 TKD -> Kemampuan Numerik
-        const finalKemampuanNumerik = sub5Val !== '' ? calculateTkdScoreToLevel(sub5Val) : base.intelektual.kemampuanNumerik;
+        const rawSub5 = extractedSubscores?.sub5;
+        const catSub5 = extractedCategories?.sub5;
+        let sub5Val: number | '' = base.tkdScores?.sub5 ?? '';
+        let finalKemampuanNumerik: ScaleLevel = base.intelektual.kemampuanNumerik;
+
+        if (rawSub5 !== null && rawSub5 !== undefined && rawSub5 !== '' && Number(rawSub5) > 0) {
+          sub5Val = Number(rawSub5);
+          finalKemampuanNumerik = calculateTkdScoreToLevel(sub5Val);
+        } else if (catSub5) {
+          finalKemampuanNumerik = parseCategoryToScaleLevel(catSub5, defaultLevel);
+          sub5Val = finalKemampuanNumerik === 4 ? 8 : (sub5Val || 8);
+        } else {
+          finalKemampuanNumerik = defaultLevel;
+          sub5Val = defaultLevel === 4 ? 8 : (defaultLevel >= 5 ? 10 : 4);
+        }
+
+        // Subtes 7 TKD -> Berpikir Analogi / Kritis
+        const rawSub7 = extractedSubscores?.sub7;
+        let sub7Val: number | '' = base.tkdScores?.sub7 ?? '';
+        if (rawSub7 !== null && rawSub7 !== undefined && rawSub7 !== '' && Number(rawSub7) > 0) {
+          sub7Val = Number(rawSub7);
+        } else {
+          sub7Val = defaultLevel === 4 ? 8 : (defaultLevel >= 5 ? 10 : 4);
+        }
+
+        const updatedIntelektual = {
+          ...base.intelektual,
+          pemahamanVerbal: finalPemahamanVerbal,
+          kemampuanNumerik: finalKemampuanNumerik,
+        };
+
+        const candidateName = extractedClientData?.nama || baseClient.nama;
+        const autoDinamika = (!base.dinamikaPsikologis || base.dinamikaPsikologis.trim() === '') ? generateGuideDinamikaPsikologis({
+          nama: candidateName,
+          iqScore: base.iqScore,
+          iqLabel: base.iqLabel,
+          intelektual: updatedIntelektual,
+          sikapKerja: base.sikapKerja,
+          kepribadian: base.kepribadian
+        }) : base.dinamikaPsikologis;
 
         return {
           ...base,
@@ -252,18 +371,15 @@ export function FormInputStaffAlu({ state, setState }: FormInputStaffAluProps) {
             sub5: sub5Val,
             sub7: sub7Val,
           },
-          intelektual: {
-            ...base.intelektual,
-            pemahamanVerbal: finalPemahamanVerbal,
-            kemampuanNumerik: finalKemampuanNumerik,
-          }
+          intelektual: updatedIntelektual,
+          dinamikaPsikologis: autoDinamika
         };
       });
 
       setUploadStatus({
         type: 'success',
         title: 'Ekstraksi TKD Berhasil!',
-        message: `Data hasil tes TKD (Subtes 3, 5, 7) dari "${file.name}" berhasil diekstrak dan dihitung otomatis.`
+        message: `Data hasil tes TKD (Subtes 3, 5, 7) dari "${file.name}" berhasil diekstrak dan disesuaikan dengan norma interpreter.`
       });
     } catch (err: any) {
       console.error('TKD Upload Error:', err);
@@ -1380,12 +1496,35 @@ Paragraf 5 (Kepribadian - Ketaatan & Kemandirian):
 
         {/* Card 7: Dinamika Psikologis */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <h3 className="text-lg font-medium text-gray-800 mb-4 pb-2 border-b">6. Dinamika Psikologis</h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-4 border-b gap-3">
+            <div>
+              <h3 className="text-lg font-medium text-gray-800">6. Dinamika Psikologis</h3>
+              <p className="text-xs text-gray-500">Narasi dinamika psikologis komprehensif berdasarkan Pedoman Interpreter</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const autoText = generateGuideDinamikaPsikologis({
+                  nama: safeState.clientData?.nama || 'Kandidat',
+                  iqScore: safeState.iqScore,
+                  iqLabel: safeState.iqLabel,
+                  intelektual: safeState.intelektual,
+                  sikapKerja: safeState.sikapKerja,
+                  kepribadian: safeState.kepribadian
+                });
+                updateState('dinamikaPsikologis', '', autoText);
+              }}
+              className="inline-flex items-center px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-all cursor-pointer self-start sm:self-auto"
+            >
+              <Sparkles className="w-4 h-4 mr-1.5" />
+              ✨ Isi Otomatis Sesuai Pedoman Interpreter
+            </button>
+          </div>
           <textarea
             rows={10}
             value={safeState.dinamikaPsikologis}
             onChange={(e) => updateState('dinamikaPsikologis', '', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none leading-relaxed"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none leading-relaxed text-sm"
             placeholder="Ketik narasi dinamika psikologis di sini..."
           />
         </div>

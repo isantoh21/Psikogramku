@@ -871,6 +871,23 @@ export const calculateTkdScoreToLevel = (score: number | string | undefined | nu
   return 1;
 };
 
+/**
+ * Konversi teks kategori / taraf hasil tes (SR, R, S, T, ST, KS, K, RB, R, RA, B, BS, Sedang, Tinggi, Baik, dll)
+ * ke tingkat skala 1-7.
+ */
+export const parseCategoryToScaleLevel = (cat: string | undefined | null, fallback: ScaleLevel = 4): ScaleLevel => {
+  if (!cat || typeof cat !== 'string') return fallback;
+  const c = cat.trim().toUpperCase();
+  if (c === 'BS' || c.includes('BAIK SEKALI') || c.includes('SANGAT TINGGI') || c === 'ST' || c.includes('VERY SUPERIOR')) return 7;
+  if (c === 'B' || c.includes('BAIK') || c.includes('TINGGI') || c === 'T' || c.includes('SUPERIOR')) return 6;
+  if (c === 'RA' || c.includes('RATA-RATA ATAS') || c.includes('RATA2 ATAS') || c.includes('CUKUP ATAS') || c === 'CA') return 5;
+  if (c === 'R' || c.includes('RATA-RATA') || c.includes('RATA2') || c.includes('SEDANG') || c === 'S' || c.includes('CUKUP') || c === 'C') return 4;
+  if (c === 'RB' || c.includes('RATA-RATA BAWAH') || c.includes('RATA2 BAWAH') || c.includes('CUKUP BAWAH') || c === 'CB') return 3;
+  if (c === 'K' || c.includes('KURANG') || c.includes('RENDAH') || c.includes('BORDERLINE')) return 2;
+  if (c === 'KS' || c.includes('KURANG SEKALI') || c.includes('SANGAT RENDAH') || c === 'SR' || c.includes('DEFICIENT')) return 1;
+  return fallback;
+};
+
 export const getStaffScaleCode = (level: number): string => {
   const codes = ['KS', 'K', 'RB', 'R', 'RA', 'B', 'BS'];
   return codes[level - 1] || 'R';
