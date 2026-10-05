@@ -1,4 +1,4 @@
-import { ScaleLevel, StaffIntelektual, StaffSikapKerja, StaffKepribadian } from '../types';
+import { ScaleLevel, StaffIntelektual, StaffSikapKerja, StaffKepribadian, ManagerKepemimpinan, ManagerSikapKerja } from '../types';
 
 /**
  * Guide Interpreter Brilian Psikologi
@@ -10,8 +10,9 @@ export interface GuideInterpreterInput {
   iqScore: number | '';
   iqLabel: string;
   intelektual: StaffIntelektual;
-  sikapKerja: StaffSikapKerja;
+  sikapKerja: StaffSikapKerja | ManagerSikapKerja;
   kepribadian: StaffKepribadian;
+  kepemimpinan?: ManagerKepemimpinan;
 }
 
 export function generateGuideDinamikaPsikologis({
@@ -20,7 +21,8 @@ export function generateGuideDinamikaPsikologis({
   iqLabel,
   intelektual,
   sikapKerja,
-  kepribadian
+  kepribadian,
+  kepemimpinan
 }: GuideInterpreterInput): string {
   const clientName = nama ? nama.trim() : 'Subjek';
   const firstName = clientName.split(/\s+/)[0] || clientName;
@@ -158,5 +160,23 @@ export function generateGuideDinamikaPsikologis({
     p5Narrative = `Sebagai penerima perintah, saudara/saudari ${firstName} merupakan orang yang setia dan loyal terhadap perusahaan serta pimpinannya. Ia sangat menghormati otoritas dan kebijakan organisasi yang berlaku. Namun demikian, ia masih membutuhkan instruksi dan pengarahan yang jelas mengenai batasan tugasnya sebelum memulai pekerjaan, sehingga terkadang membuatnya ragu-ragu melangkah bila belum ada aturan atau panduan resmi dari atasan. Dengan bimbingan serta alur supervisi yang jelas, ia akan mampu menjalankan fungsinya secara optimal dan konsisten.`;
   }
 
-  return `${p1Narrative}\n\n${p2Narrative}\n\n${p3Narrative}\n\n${p4Narrative}\n\n${p5Narrative}`;
+  // ----------------------------------------------------
+  // PARAGRAF 6: GAYA KEPEMIMPINAN & MANAJERIAL (Hal 10 - 12 PDF)
+  // ----------------------------------------------------
+  let p6Narrative = '';
+  if (kepemimpinan) {
+    const lead = kepemimpinan.kepemimpinan;
+    if (lead >= 5) {
+      p6Narrative = `Dalam peran manajerial dan kepemimpinan, saudara/saudari ${firstName} memiliki kapasitas yang tergolong memadai dan efektif. Ia mampu menyusun perencanaan kerja serta merumuskan target departemen secara sistematis dan terstruktur. Dalam memimpin tim, ia mampu menjalankan fungsi monitoring, pengawasan, serta evaluasi output kinerja bawahan secara berkesinambungan. Karakter kepemimpinannya tegas dalam memberikan arahan dan penilaian yang objektif berdasarkan target kerja yang disepakati. Selain itu, ia bersikap proaktif dalam membina dan mendukung bawahan untuk mengembangkan potensi diri serta keterampilan kerjanya (people development) demi kemajuan organisasi bersama.`;
+    } else {
+      p6Narrative = `Dalam peran manajerial dan kepemimpinan, saudara/saudari ${firstName} memiliki rasa percaya diri untuk memimpin serta mampu mengarahkan tim dalam menjalankan rutinitas operasional kerja harian secara tertib. Namun demikian, kapasitas kepemimpinannya masih memerlukan pengembangan lebih lanjut, khususnya dalam hal pendelegasian wewenang yang strategis, ketegasan dalam mengevaluasi bawahan secara objektif, serta fungsi pembinaan (coaching & mentoring) bawahan agar lebih mandiri dan proaktif. Dengan pembekalan teknik kepemimpinan manajerial yang terarah, ia akan mampu mengoptimalkan performa kepemimpinannya dalam mengelola tim yang lebih besar.`;
+    }
+  }
+
+  const paragraphs = [p1Narrative, p2Narrative, p3Narrative, p4Narrative, p5Narrative];
+  if (p6Narrative) {
+    paragraphs.push(p6Narrative);
+  }
+
+  return paragraphs.join('\n\n');
 }

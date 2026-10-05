@@ -11,6 +11,7 @@ import {
   getStaffScaleCode,
   getStaffScaleFullLabel
 } from '../utils/scoring';
+import { generateGuideDinamikaPsikologis } from '../utils/guideInterpreter';
 import { getAIHeaders, getAISettings } from '../utils/aiSettings';
 import { 
   executeExtraction, 
@@ -357,6 +358,26 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
         }
 
         const parsedIq = iqScore ? Number(iqScore) : base.iqScore;
+        const finalIqLabel = iqLabel || (parsedIq ? mapISTToLabel(Number(parsedIq)) : base.iqLabel);
+
+        const updatedIntelektual = {
+          ...base.intelektual,
+          potensiKecerdasan: parsedIq ? mapIQToLevel(Number(parsedIq)) : base.intelektual.potensiKecerdasan,
+          berpikirSistematis: finalBerpikirSistematis,
+          pemahamanVerbal: finalVerbal,
+          analisaSintesa: finalAnalisaSintesa,
+          pemahamanKonsep: finalPemahamanKonsep,
+          kemampuanNumerik: finalNumerik,
+        };
+
+        const autoDinamika = (!base.dinamikaPsikologis || base.dinamikaPsikologis.trim() === '') ? generateGuideDinamikaPsikologis({
+          nama: extractedClientData?.nama || baseClient.nama,
+          iqScore: parsedIq,
+          iqLabel: finalIqLabel,
+          intelektual: updatedIntelektual,
+          sikapKerja: base.sikapKerja,
+          kepribadian: base.kepribadian
+        }) : base.dinamikaPsikologis;
 
         return {
           ...base,
@@ -372,7 +393,7 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
             namaPT: extractedClientData?.namaPT || extractedClientData?.perusahaan || baseClient.namaPT,
           },
           iqScore: parsedIq,
-          iqLabel: iqLabel || (parsedIq ? mapISTToLabel(Number(parsedIq)) : base.iqLabel),
+          iqLabel: finalIqLabel,
           istSubscores: {
             SE: istSubscores?.SE ?? base.istSubscores?.SE ?? '',
             WA: istSubscores?.WA ?? base.istSubscores?.WA ?? '',
@@ -394,15 +415,8 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
             analisaSintesa: analisaCat,
             kemampuanNumerik: numerikCat,
           },
-          intelektual: {
-            ...base.intelektual,
-            potensiKecerdasan: parsedIq ? mapIQToLevel(Number(parsedIq)) : base.intelektual.potensiKecerdasan,
-            berpikirSistematis: finalBerpikirSistematis,
-            pemahamanVerbal: finalVerbal,
-            analisaSintesa: finalAnalisaSintesa,
-            pemahamanKonsep: finalPemahamanKonsep,
-            kemampuanNumerik: finalNumerik,
-          }
+          intelektual: updatedIntelektual,
+          dinamikaPsikologis: autoDinamika
         };
       });
 
@@ -476,6 +490,32 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
         const base = prev || INITIAL_STAFF_STATE;
         const baseClient = base.clientData || INITIAL_STAFF_STATE.clientData;
         const baseSikapKerja = base.sikapKerja || INITIAL_STAFF_STATE.sikapKerja;
+
+        const updatedSikapKerja = {
+          ...baseSikapKerja,
+          kecepatan: (extractedSikapKerja.kecepatan >= 1 && extractedSikapKerja.kecepatan <= 7) 
+            ? extractedSikapKerja.kecepatan 
+            : baseSikapKerja.kecepatan,
+          ketelitian: (extractedSikapKerja.ketelitian >= 1 && extractedSikapKerja.ketelitian <= 7) 
+            ? extractedSikapKerja.ketelitian 
+            : baseSikapKerja.ketelitian,
+          ketekunan: (extractedSikapKerja.ketekunan >= 1 && extractedSikapKerja.ketekunan <= 7) 
+            ? extractedSikapKerja.ketekunan 
+            : baseSikapKerja.ketekunan,
+          dayaTahanStres: (extractedSikapKerja.dayaTahanStres >= 1 && extractedSikapKerja.dayaTahanStres <= 7) 
+            ? extractedSikapKerja.dayaTahanStres 
+            : baseSikapKerja.dayaTahanStres,
+        };
+
+        const autoDinamika = (!base.dinamikaPsikologis || base.dinamikaPsikologis.trim() === '') ? generateGuideDinamikaPsikologis({
+          nama: extractedClientData.nama || baseClient.nama,
+          iqScore: base.iqScore,
+          iqLabel: base.iqLabel,
+          intelektual: base.intelektual,
+          sikapKerja: updatedSikapKerja,
+          kepribadian: base.kepribadian
+        }) : base.dinamikaPsikologis;
+
         return {
           ...base,
           clientData: {
@@ -487,21 +527,8 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
             tujuanPemeriksaan: extractedClientData.tujuanPemeriksaan || baseClient.tujuanPemeriksaan,
             namaPT: extractedClientData.namaPT || baseClient.namaPT,
           },
-          sikapKerja: {
-            ...baseSikapKerja,
-            kecepatan: (extractedSikapKerja.kecepatan >= 1 && extractedSikapKerja.kecepatan <= 7) 
-              ? extractedSikapKerja.kecepatan 
-              : baseSikapKerja.kecepatan,
-            ketelitian: (extractedSikapKerja.ketelitian >= 1 && extractedSikapKerja.ketelitian <= 7) 
-              ? extractedSikapKerja.ketelitian 
-              : baseSikapKerja.ketelitian,
-            ketekunan: (extractedSikapKerja.ketekunan >= 1 && extractedSikapKerja.ketekunan <= 7) 
-              ? extractedSikapKerja.ketekunan 
-              : baseSikapKerja.ketekunan,
-            dayaTahanStres: (extractedSikapKerja.dayaTahanStres >= 1 && extractedSikapKerja.dayaTahanStres <= 7) 
-              ? extractedSikapKerja.dayaTahanStres 
-              : baseSikapKerja.dayaTahanStres,
-          }
+          sikapKerja: updatedSikapKerja,
+          dinamikaPsikologis: autoDinamika
         };
       });
 
@@ -558,6 +585,29 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
         const base = prev || INITIAL_STAFF_STATE;
         const baseClient = base.clientData || INITIAL_STAFF_STATE.clientData;
         const baseKepribadian = base.kepribadian || INITIAL_STAFF_STATE.kepribadian;
+
+        const updatedKepribadian = {
+          ...baseKepribadian,
+          kematanganEmosi: kepribadian?.kematanganEmosi || baseKepribadian.kematanganEmosi,
+          kemasakanSosial: kepribadian?.kemasakanSosial || baseKepribadian.kemasakanSosial,
+          rasaPercayaDiri: kepribadian?.rasaPercayaDiri || baseKepribadian.rasaPercayaDiri,
+          motivasiBerprestasi: kepribadian?.motivasiBerprestasi || baseKepribadian.motivasiBerprestasi,
+          sikapMandiri: kepribadian?.sikapMandiri || baseKepribadian.sikapMandiri,
+          inisiatif: kepribadian?.inisiatif || baseKepribadian.inisiatif,
+          kemampuanBekerjasama: kepribadian?.kemampuanBekerjasama || baseKepribadian.kemampuanBekerjasama,
+          keterampilanBerkomunikasi: kepribadian?.keterampilanBerkomunikasi || baseKepribadian.keterampilanBerkomunikasi,
+          loyalitas: kepribadian?.loyalitas || baseKepribadian.loyalitas,
+        };
+
+        const autoDinamika = (!base.dinamikaPsikologis || base.dinamikaPsikologis.trim() === '') ? generateGuideDinamikaPsikologis({
+          nama: extractedClientData?.nama || baseClient.nama,
+          iqScore: base.iqScore,
+          iqLabel: base.iqLabel,
+          intelektual: base.intelektual,
+          sikapKerja: base.sikapKerja,
+          kepribadian: updatedKepribadian
+        }) : base.dinamikaPsikologis;
+
         return {
           ...base,
           clientData: {
@@ -568,18 +618,8 @@ export function FormInputStaff({ state, setState }: FormInputStaffProps) {
             tujuanPemeriksaan: extractedClientData?.tujuanPemeriksaan || baseClient.tujuanPemeriksaan,
             namaPT: extractedClientData?.namaPT || extractedClientData?.perusahaan || baseClient.namaPT,
           },
-          kepribadian: {
-            ...baseKepribadian,
-            kematanganEmosi: kepribadian?.kematanganEmosi || baseKepribadian.kematanganEmosi,
-            kemasakanSosial: kepribadian?.kemasakanSosial || baseKepribadian.kemasakanSosial,
-            rasaPercayaDiri: kepribadian?.rasaPercayaDiri || baseKepribadian.rasaPercayaDiri,
-            motivasiBerprestasi: kepribadian?.motivasiBerprestasi || baseKepribadian.motivasiBerprestasi,
-            sikapMandiri: kepribadian?.sikapMandiri || baseKepribadian.sikapMandiri,
-            inisiatif: kepribadian?.inisiatif || baseKepribadian.inisiatif,
-            kemampuanBekerjasama: kepribadian?.kemampuanBekerjasama || baseKepribadian.kemampuanBekerjasama,
-            keterampilanBerkomunikasi: kepribadian?.keterampilanBerkomunikasi || baseKepribadian.keterampilanBerkomunikasi,
-            loyalitas: kepribadian?.loyalitas || baseKepribadian.loyalitas,
-          }
+          kepribadian: updatedKepribadian,
+          dinamikaPsikologis: autoDinamika
         };
       });
       
@@ -1606,12 +1646,35 @@ Paragraf 5 (Kepribadian - Ketaatan & Kemandirian):
 
         {/* Card 6: Dinamika Psikologis */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <h3 className="text-lg font-medium text-gray-800 mb-4 pb-2 border-b">6. Dinamika Psikologis</h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-4 border-b gap-3">
+            <div>
+              <h3 className="text-lg font-medium text-gray-800">6. Dinamika Psikologis</h3>
+              <p className="text-xs text-gray-500">Narasi dinamika psikologis komprehensif berdasarkan Pedoman Interpreter</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const autoText = generateGuideDinamikaPsikologis({
+                  nama: safeState.clientData?.nama || 'Kandidat',
+                  iqScore: safeState.iqScore,
+                  iqLabel: safeState.iqLabel,
+                  intelektual: safeState.intelektual,
+                  sikapKerja: safeState.sikapKerja,
+                  kepribadian: safeState.kepribadian
+                });
+                updateState('dinamikaPsikologis', '', autoText);
+              }}
+              className="inline-flex items-center px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-all cursor-pointer self-start sm:self-auto"
+            >
+              <Sparkles className="w-4 h-4 mr-1.5" />
+              ✨ Isi Otomatis Sesuai Pedoman Interpreter
+            </button>
+          </div>
           <textarea
             rows={10}
             value={state.dinamikaPsikologis}
             onChange={(e) => updateState('dinamikaPsikologis', '', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none leading-relaxed"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none leading-relaxed text-sm"
             placeholder="Ketik narasi dinamika psikologis di sini..."
           />
         </div>
