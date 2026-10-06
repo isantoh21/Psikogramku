@@ -94,24 +94,24 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
   const currentDateFormatted = formatDateId(new Date().toISOString().split('T')[0]);
 
   return (
-    <div className="h-full flex flex-col bg-gray-100">
-      {/* Top Action Bar (Hidden on Print) */}
-      <div className="p-3 bg-white border-b flex justify-between items-center shadow-sm sticky top-0 z-10 print:hidden">
-        <div>
-          <h2 className="text-sm font-bold text-gray-800">Preview Laporan CFIT Skala 3 (1 Lembar)</h2>
-          <span className="text-[11px] text-gray-500">Didesain presisi untuk 1 halaman cetak A4</span>
+    <div className="relative w-full flex flex-col items-center">
+      {/* Action Bar (Hidden on Print) */}
+      <div className="sticky top-0 z-20 w-full max-w-[210mm] bg-white/95 backdrop-blur-sm border-b border-gray-200 px-4 py-2 mb-4 flex justify-between items-center print:hidden rounded-lg shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="px-2 py-0.5 text-xs font-bold rounded bg-indigo-100 text-indigo-700">Kertas A4</span>
+          <span className="text-[11px] text-gray-500 font-medium hidden sm:inline">210 mm × 297 mm (1 Lembar)</span>
         </div>
         <div className="flex items-center gap-2">
           <button 
             onClick={handlePrint}
-            className="flex items-center text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300 px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+            className="flex items-center text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300 px-3 py-1.5 rounded-lg transition-colors shadow-xs"
           >
             <Printer className="w-3.5 h-3.5 mr-1.5" />
             Cetak / Simpan PDF
           </button>
           <button 
             onClick={exportToDocx}
-            className="flex items-center text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-3.5 py-1.5 rounded-lg transition-colors shadow-sm"
+            className="flex items-center text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-3.5 py-1.5 rounded-lg transition-colors shadow-xs"
           >
             <FileText className="w-3.5 h-3.5 mr-1.5" />
             Cetak Word (DOCX)
@@ -119,14 +119,19 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
         </div>
       </div>
 
-      {/* Main Preview Container */}
-      <div className="flex-1 overflow-y-auto p-4 flex justify-center print:p-0 print:m-0 print:overflow-visible">
-        <div 
-          id="psikogram-preview-cfit3"
-          className="bg-white p-6 sm:p-7 shadow-lg w-full max-w-[210mm] text-black font-serif text-[10.5px] leading-tight print:shadow-none print:m-0 print:p-0 print:w-full print:max-w-none"
-          style={{ width: '210mm', minHeight: '297mm', boxSizing: 'border-box' }}
-        >
-          {/* Header Kop Surat */}
+      {/* Main A4 Paper Sheet */}
+      <div 
+        id="psikogram-preview-cfit3"
+        className="w-[210mm] min-h-[297mm] bg-white text-black font-serif text-[10.5px] leading-tight print:shadow-none print:m-0 print:p-0 print:w-full print:min-h-0 mx-auto"
+        style={{
+          width: '210mm',
+          minHeight: '297mm',
+          padding: '10mm 14mm',
+          boxSizing: 'border-box',
+          backgroundColor: '#ffffff'
+        }}
+      >
+        {/* Header Kop Surat */}
           <div className="flex items-center justify-between border-b-2 border-black pb-2 mb-2">
             <div className="flex items-center">
               <img 
@@ -364,6 +369,5 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
           </div>
         </div>
       </div>
-    </div>
   );
 }

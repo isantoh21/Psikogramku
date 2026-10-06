@@ -184,6 +184,113 @@ export async function callDirectAI({
   return cleanJsonOutput(rawOutput, fallback);
 }
 
+/**
+ * Execute natural text completion directly from browser to AI provider.
+ * Returns pure text without forcing JSON parsing, ideal for psychology narrative recommendations.
+ */
+export async function callDirectTextAI({
+  prompt,
+  systemInstruction
+}: {
+  prompt: string;
+  systemInstruction?: string;
+}): Promise<string> {
+  const settings = getAISettings();
+  let baseUrl = settings.baseUrl || '';
+  let apiKey = (settings.apiKey || '').trim();
+  let model = settings.model || '';
+
+  // 1. Direct Google Gemini call from browser
+  if (settings.provider === 'gemini') {
+    if (!apiKey) {
+      throw new Error('API Key Google Gemini belum diisi. Masukkan API Key Anda di menu ⚙️ Pengaturan AI.');
+    }
+    const modelName = model || 'gemini-2.5-flash-lite';
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    const parts: any[] = [{ text: prompt }];
+
+    const payload: any = {
+      contents: [{ parts }],
+      generationConfig: {
+        temperature: 0.7,
+      }
+    };
+    if (systemInstruction) {
+      payload.systemInstruction = {
+        parts: [{ text: systemInstruction }]
+      };
+    }
+
+    const response = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const resJson = await response.json();
+    if (!response.ok) {
+      throw new Error(resJson?.error?.message || `Google Gemini API Error (${response.status})`);
+    }
+    const rawOutput = resJson?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    return rawOutput.trim();
+  }
+
+  // 2. OpenAI-compatible providers
+  if (settings.provider === 'openai') {
+    baseUrl = baseUrl || 'https://api.openai.com/v1';
+    model = model || 'gpt-4o-mini';
+  } else if (settings.provider === 'openrouter') {
+    baseUrl = baseUrl || 'https://openrouter.ai/api/v1';
+    model = model || 'google/gemini-2.0-flash-001';
+  } else if (settings.provider === 'groq') {
+    baseUrl = baseUrl || 'https://api.groq.com/openai/v1';
+    model = model || 'llama-3.3-70b-versatile';
+  } else if (settings.provider === 'koboillm') {
+    baseUrl = baseUrl || 'https://api.koboillm.com/v1';
+    apiKey = apiKey || 'sk-wMaVBOWC1G69emLkQ5T9Ng';
+    model = model || 'gemini/gemini-3.1-flash-lite';
+  } else if (settings.provider === 'custom') {
+    baseUrl = baseUrl || 'https://api.openai.com/v1';
+    model = model || 'gemini/gemini-3.1-flash-lite';
+  }
+
+  if (!apiKey) {
+    throw new Error(`API Key untuk ${settings.provider} belum diisi. Masukkan API Key Anda di menu ⚙️ Pengaturan AI.`);
+  }
+
+  const endpoint = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
+  const messages: any[] = [];
+  if (systemInstruction) {
+    messages.push({ role: 'system', content: systemInstruction });
+  }
+  messages.push({ role: 'user', content: prompt });
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+      ...(settings.provider === 'openrouter' ? {
+        'HTTP-Referer': window.location.origin,
+        'X-Title': 'Psikogram AI Generator'
+      } : {})
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature: 0.7
+    })
+  });
+
+  const resJson = await response.json();
+  if (!response.ok) {
+    const errMsg = resJson?.error?.message || resJson?.message || response.statusText;
+    throw new Error(`Penyedia AI (${settings.provider}) mengembalikan error: ${errMsg}`);
+  }
+
+  const rawOutput = resJson?.choices?.[0]?.message?.content || '';
+  return rawOutput.trim();
+}
+
 // Prompts
 export const IST_PROMPT = `Ekstrak data hasil tes IST (Intelligenz Struktur Test) dan biodata dari dokumen laporan psikotes seleksi staf ini.
 Kembalikan HANYA format JSON valid persis seperti template di bawah ini (tanpa markdown \`\`\`json):

@@ -11,7 +11,7 @@ import {
   CFIT3_ANSWER_KEYS,
   gradeCfit3Subtest
 } from '../utils/scoring';
-import { callDirectAI } from '../utils/clientAIExtractor';
+import { callDirectAI, callDirectTextAI } from '../utils/clientAIExtractor';
 import { getAISettings } from '../utils/aiSettings';
 import { 
   Bot, 
@@ -210,6 +210,43 @@ export function FormInputCfit3({ state, setState }: FormInputCfit3Props) {
 
   const isSmp = clientData.pendidikan === 'SMP' || (typeof ageYears === 'number' && ageYears <= 15);
 
+  const cleanNarrativeRecommendation = (raw: string): string => {
+    if (!raw) return '';
+    let cleaned = raw.trim();
+
+    // Strip codeblock wrappers if any
+    if (cleaned.startsWith('```json')) cleaned = cleaned.substring(7);
+    else if (cleaned.startsWith('```markdown')) cleaned = cleaned.substring(11);
+    else if (cleaned.startsWith('```')) cleaned = cleaned.substring(3);
+    if (cleaned.endsWith('```')) cleaned = cleaned.substring(0, cleaned.length - 3);
+    cleaned = cleaned.trim();
+
+    // Parse JSON if model accidentally returned a JSON object
+    try {
+      const parsed = JSON.parse(cleaned);
+      if (parsed && typeof parsed === 'object') {
+        if (typeof parsed.rekomendasi === 'string') return cleanNarrativeRecommendation(parsed.rekomendasi);
+        const parts: string[] = [];
+        for (const [_, v] of Object.entries(parsed)) {
+          if (typeof v === 'string') parts.push(v);
+          else if (Array.isArray(v)) parts.push(v.join(', '));
+        }
+        if (parts.length > 0) cleaned = parts.join('\n\n');
+      }
+    } catch (_) {
+      // Continue with plain string processing
+    }
+
+    // Strip markdown formatting symbols
+    cleaned = cleaned.replace(/\*\*(.*?)\*\*/g, '$1'); // bold
+    cleaned = cleaned.replace(/\*(.*?)\*/g, '$1');     // italic
+    cleaned = cleaned.replace(/^#{1,6}\s*/gm, '');      // headings #
+    cleaned = cleaned.replace(/`([^`]+)`/g, '$1');      // backticks
+    cleaned = cleaned.replace(/^\s*[\*\•]\s*/gm, '- '); // bullet points
+
+    return cleaned.trim();
+  };
+
   const buildAiPrompt = () => {
     const jenjangStr = isSmp ? 'Siswa Jenjang SMP (Sekolah Menengah Pertama)' : 'Siswa/Individu Jenjang SMA / SMK / Mahasiswa / Dewasa';
     
@@ -246,18 +283,19 @@ Skor IQ: ${safeState.iqScore || '-'} (${safeState.iqLabel || getIqClassification
 2. ${dreamJobs[1] || 'Pekerjaan Impian 2'}
 3. ${dreamJobs[2] || 'Pekerjaan Impian 3'}
 
-=== PANDUAN PENYUSUNAN REKOMENDASI ===
-${isSmp ? `KARENA KLIEN BERADA DI USIA / JENJANG SMP:
-1. Rekomendasi Pilihan Sekolah Lanjutan: Berikan ketegasan apakah lebih direkomendasikan masuk SMA atau SMK, disertai alasan kecocokan antara potensi kognitif CFIT Skala 3, pola pikir, dan minat RMIB.
-2. Rekomendasi Jurusan / Program Keahlian: Tentukan penjurusan spesifik di SMA (misal MIPA/IPA, IPS) atau program keahlian di SMK yang paling selaras untuk membuka jalan menuju 3 pekerjaan impian klien.
-3. Penguatan Belajar Mata Pelajaran: Sebutkan mata pelajaran sekolah yang WAJIB diperkuat dan dioptimalkan mulai saat ini beserta tips belajarnya untuk menunjang pencapaian cita-cita tersebut.` : `KARENA KLIEN BERADA DI USIA / JENJANG SMA KE ATAS:
-1. Rekomendasi Jalur Karir & Studi Lanjutan: Berikan rekomendasi apakah disarankan melanjutkan ke Perguruan Tinggi (Kuliah) atau Dunia Kerja / Vokasi. Sebutkan program studi / jurusan kuliah atau bidang karir spesifik yang paling relevan dengan potensi kognitif dan 3 pekerjaan impian klien.
-2. Usaha & Persiapan Konkret: Rincikan apa saja yang harus diusahakan dan dipersiapkan secara nyata mulai sekarang (misal: penguatan portofolio, kompetensi teknis, sertifikasi, penguasaan bahasa asing, logika matematika, serta pengembangan kepribadian) guna mewujudkan cita-cita tersebut.`}
+=== PANDUAN STRUKTUR REKOMENDASI ===
+${isSmp ? `KARENA KLIEN BERADA DI USIA / JENJANG SMP, SUSUN PERSIS DALAM 3 POIN BERIKUT:
+1. Rekomendasi Pilihan Sekolah Lanjutan: Berikan ketegasan apakah lebih direkomendasikan masuk SMA atau SMK, disertai alasan rasional kesesuaian antara taraf IQ CFIT Skala 3, pola berpikir, dan minat RMIB klien.
+2. Rekomendasi Jurusan / Program Keahlian: Tentukan penjurusan spesifik di SMA (misal MIPA/IPA atau IPS) atau program keahlian di SMK yang paling selaras untuk membuka jalan menuju 3 pekerjaan impian klien.
+3. Penguatan Belajar Mata Pelajaran: Sebutkan mata pelajaran sekolah yang WAJIB diperkuat dan dimaksimalkan mulai dari sekarang beserta strategi belajarnya untuk menunjang pencapaian cita-cita tersebut.` : `KARENA KLIEN BERADA DI USIA / JENJANG SMA KE ATAS, SUSUN PERSIS DALAM 3 POIN BERIKUT:
+1. Rekomendasi Jalur Karir & Studi: Berikan rekomendasi tegas apakah disarankan melanjutkan ke Perguruan Tinggi (Kuliah) atau Dunia Kerja / Vokasi, disertai alasan kecocokan kognitif dan minatnya.
+2. Rekomendasi Program Studi / Bidang Profesi: Sebutkan program studi kuliah (S1/D4) atau bidang karir spesifik yang paling relevan dengan potensi kognitif dan 3 pekerjaan impian klien.
+3. Usaha & Persiapan Konkret: Rincikan apa saja langkah nyata yang harus diusahakan mulai sekarang (penguasaan keahlian praktis, portofolio, sertifikasi, penguasaan bahasa asing, logika matematika, serta pembiasaan kerja mandiri) guna mewujudkan cita-cita tersebut.`}
 
-ATURAN OUTPUT:
-- Susun secara ringkas, padat, elegan, berbobot psikologis, dan profesional (sekitar 2-3 paragraf berkesinambungan atau poin bernomor yang rapi).
-- Tidak bertele-tele karena akan dimuat di lembar rekomendasi psikogram 1 lembar A4.
-- Kembalikan langsung teks narasi rekomendasi (tanpa format markdown rumit/tanda kutip berlebih).`;
+ATURAN FORMAT PENULISAN:
+1. Tuliskan HANYA narasi rekomendasi psikologis resmi dalam Bahasa Indonesia yang mengalir, lugas, santun, dan profesional.
+2. JANGAN gunakan tanda bintang tebal (**), tanda pagar (###), atau format JSON apa pun. Gunakan penomoran biasa 1., 2., 3.
+3. Buat sekitar 150 - 200 kata agar padat, proporsional, dan pas dimuat di lembar laporan psikogram 1 lembar A4.`;
   };
 
   const handleGenerateAI = async () => {
@@ -265,27 +303,23 @@ ATURAN OUTPUT:
     setAiError(null);
     try {
       const prompt = buildAiPrompt();
-      const aiConfig = getAISettings();
-      const result = await callDirectAI({
-        prompt: prompt + '\n\nKembalikan rekomendasi dalam bentuk teks narasi rekomendasi psikologis langsung yang rapi dan terstruktur.'
-      });
-
-      let textOutput = '';
-      if (typeof result === 'string') {
-        textOutput = result;
-      } else if (result?.rekomendasi) {
-        textOutput = result.rekomendasi;
-      } else if (result?.text) {
-        textOutput = result.text;
-      } else if (result?.output) {
-        textOutput = result.output;
-      } else {
-        textOutput = JSON.stringify(result, null, 2);
+      let rawText = '';
+      try {
+        rawText = await callDirectTextAI({
+          prompt: prompt,
+          systemInstruction: 'Anda adalah seorang Psikolog Pendidikan dan Karir profesional. Berikan rekomendasi narasi Bahasa Indonesia yang rapi, padat, terstruktur, tanpa simbol markdown tebal (**) dan tanpa format JSON.'
+        });
+      } catch (err: any) {
+        console.warn('callDirectTextAI fallback to callDirectAI:', err);
+        const fallbackRes = await callDirectAI({ prompt });
+        rawText = typeof fallbackRes === 'string' ? fallbackRes : (fallbackRes?.rekomendasi || JSON.stringify(fallbackRes));
       }
+
+      const cleanText = cleanNarrativeRecommendation(rawText);
 
       setState(prev => ({
         ...(prev || INITIAL_CFIT3_STATE),
-        rekomendasi: textOutput.trim()
+        rekomendasi: cleanText
       }));
     } catch (err: any) {
       console.error('Error generating recommendation:', err);
