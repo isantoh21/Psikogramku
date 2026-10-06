@@ -354,8 +354,8 @@ ATURAN FORMAT PENULISAN:
             <span className="px-2.5 py-1 text-xs font-bold rounded-md bg-indigo-100 text-indigo-700">CFIT SKALA 3</span>
             <span className="px-2 py-0.5 text-xs font-semibold rounded bg-amber-100 text-amber-800">Form A (1 Lembar)</span>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mt-1">Input Data & Skor CFIT Skala 3</h2>
-          <p className="text-xs text-gray-500">Kalkulasi norma otomatis berdasarkan usia klien & rekomendasi AI terintegrasi RMIB</p>
+          <h2 className="text-xl font-bold text-gray-900 mt-1">Laporan Panti Clarak</h2>
+          <p className="text-xs text-gray-500">Kalkulasi norma dinamis CFIT Skala 3 & rekomendasi AI terintegrasi RMIB</p>
         </div>
         <button
           onClick={handleReset}

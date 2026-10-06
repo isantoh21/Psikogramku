@@ -409,7 +409,7 @@ export default function App() {
                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeApp === 'cfit3' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
               >
                 <Award className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm font-medium text-left whitespace-nowrap">Laporan CFIT Skala 3</span>
+                <span className="text-sm font-medium text-left whitespace-nowrap">Laporan Panti Clarak</span>
               </Link>
               <Link
                 to="/staff"
@@ -485,7 +485,7 @@ export default function App() {
                 <Menu className="w-6 h-6" />
               </button>
               <h1 className="text-xl font-bold tracking-tight truncate">
-                {activeApp === 'penjurusan' ? 'Psikogram Tes Minat Bakat Penjurusan' : activeApp === 'sd' ? 'Psikogram Tes Minat Bakat SD' : activeApp === 'cfit3' ? 'Laporan CFIT Skala 3 (1 Lembar)' : activeApp === 'markitdown' ? 'Mark It Down Converter' : activeApp === 'bei' ? 'Hasil BEI' : activeApp === 'manajer' ? 'Psikogram Tes Seleksi Manajer' : activeApp === 'staff-alu' ? 'seleksi staf (Alam Lestari Unggul)' : 'Psikogram Tes Seleksi Staff'}
+                {activeApp === 'penjurusan' ? 'Psikogram Tes Minat Bakat Penjurusan' : activeApp === 'sd' ? 'Psikogram Tes Minat Bakat SD' : activeApp === 'cfit3' ? 'Laporan Panti Clarak (1 Lembar)' : activeApp === 'markitdown' ? 'Mark It Down Converter' : activeApp === 'bei' ? 'Hasil BEI' : activeApp === 'manajer' ? 'Psikogram Tes Seleksi Manajer' : activeApp === 'staff-alu' ? 'seleksi staf (Alam Lestari Unggul)' : 'Psikogram Tes Seleksi Staff'}
               </h1>
             </div>
 

@@ -57,7 +57,7 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Laporan_CFIT3_${(clientData.nama || 'Klien').replace(/\s+/g, '_')}.doc`;
+    link.download = `Laporan_Panti_Clarak_${(clientData.nama || 'Klien').replace(/\s+/g, '_')}.doc`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
