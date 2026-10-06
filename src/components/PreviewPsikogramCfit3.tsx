@@ -351,7 +351,7 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
                   Layanan Konsultasi, Edukasi, dan Tes Psikologi Kota Probolinggo
                 </div>
                 <div style={{ fontSize: '8.5px', lineHeight: '1.2', color: '#374151' }}>
-                  Jl. Hayam Wuruk II/2, Kec. Mayangan, Kota Probolinggo | SIPP: {psikolog?.sipp || '20250059-2025-01-0567'}
+                  Jl. Hayam Wuruk II/2, Kec. Mayangan, Kota Probolinggo
                 </div>
                 <div style={{ fontSize: '7.5px', lineHeight: '1.2', color: '#4b5563' }}>
                   Email: annurpsychocenter@gmail.com | IG: @annurpsychocenter
