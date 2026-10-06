@@ -146,9 +146,8 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
           </div>
 
           {/* Title */}
-          <div className="text-center mb-2.5">
+          <div className="text-center mb-3">
             <h2 className="text-sm font-bold uppercase tracking-wider underline">HASIL PEMERIKSAAN PSIKOLOGIS</h2>
-            <p className="text-[10px] font-semibold text-gray-700 mt-0.5">INSTRUMEN: CFIT SKALA 3 & RMIB (1 LEMBAR)</p>
           </div>
 
           {/* Data Klien */}
