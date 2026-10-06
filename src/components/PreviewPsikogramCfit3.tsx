@@ -333,16 +333,19 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
   return (
     <div className="relative w-full flex flex-col items-center">
       {/* Action Bar (Hidden on Print) */}
-      <div className="sticky top-0 z-20 w-full max-w-[210mm] bg-white/95 backdrop-blur-sm border-b border-gray-200 px-4 py-2 mb-4 flex justify-between items-center print:hidden rounded-lg shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="px-2 py-0.5 text-xs font-bold rounded bg-indigo-100 text-indigo-700">Kertas A4</span>
-          <span className="text-[11px] text-gray-500 font-medium hidden sm:inline">210 mm × 297 mm (1 Lembar)</span>
+      <div className="sticky top-0 z-20 w-full max-w-[210mm] bg-white/80 backdrop-blur-md border border-slate-200/90 px-4 py-2.5 mb-5 flex justify-between items-center print:hidden rounded-xl shadow-xs">
+        <div className="flex items-center gap-2.5">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md bg-slate-900 text-white tracking-wide">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            A4 Portrait
+          </span>
+          <span className="text-xs text-slate-500 font-normal hidden sm:inline">210 × 297 mm • Standard ISO</span>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={exportToPdf}
             disabled={isExportingPdf}
-            className="flex items-center text-xs font-semibold text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg transition-colors shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 px-3.5 py-2 rounded-lg shadow-xs hover:shadow transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {isExportingPdf ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Download className="w-3.5 h-3.5 mr-1.5" />}
             {isExportingPdf ? 'Menyimpan...' : 'Simpan PDF'}
@@ -350,21 +353,21 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
           <button
             onClick={exportAsImage}
             disabled={isExportingImage}
-            className="flex items-center text-xs font-semibold text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-lg transition-colors shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 px-3 py-2 rounded-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {isExportingImage ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Download className="w-3.5 h-3.5 mr-1.5" />}
             {isExportingImage ? 'Menyimpan...' : 'Simpan Gambar'}
           </button>
           <button
             onClick={handlePrint}
-            className="flex items-center text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300 px-3 py-1.5 rounded-lg transition-colors shadow-xs"
+            className="flex items-center text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 px-3 py-2 rounded-lg transition-all active:scale-[0.98] cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5 mr-1.5" />
             Cetak
           </button>
           <button
             onClick={exportToDocx}
-            className="flex items-center text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-3.5 py-1.5 rounded-lg transition-colors shadow-xs"
+            className="flex items-center text-xs font-medium text-blue-700 bg-blue-50/70 hover:bg-blue-100/70 border border-blue-200/80 px-3.5 py-2 rounded-lg transition-all active:scale-[0.98] cursor-pointer"
           >
             <FileText className="w-3.5 h-3.5 mr-1.5" />
             Cetak Word (DOCX)

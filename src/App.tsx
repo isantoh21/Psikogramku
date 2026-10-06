@@ -359,112 +359,157 @@ export default function App() {
   if (!isLoaded) return null;
 
   return (
-    <div className="flex h-screen bg-gray-100 text-gray-900 font-sans print:bg-white overflow-hidden print:overflow-visible print:h-auto print:block">
+    <div className="flex h-screen bg-[#f8fafc] text-slate-900 font-sans print:bg-white overflow-hidden print:overflow-visible print:h-auto print:block">
       
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden print:hidden"
+          className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-40 lg:hidden print:hidden transition-opacity"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
-      {/* Admin Panel Sidebar */}
+      {/* Admin Panel Sidebar - Modern Sleek Obsidian */}
       <div className={`
-        fixed lg:static inset-y-0 left-0 z-50 flex-shrink-0 bg-gray-900 text-white transition-all duration-300 ease-in-out print:hidden
+        fixed lg:static inset-y-0 left-0 z-50 flex-shrink-0 bg-[#0b0f19] text-slate-200 transition-all duration-300 ease-in-out print:hidden border-r border-slate-800/80 shadow-2xl lg:shadow-none
         ${isSidebarOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full lg:w-0 lg:translate-x-0 overflow-hidden'}
       `}>
         <div className="w-72 h-full flex flex-col">
-          <div className="flex items-center justify-between p-6 border-b border-gray-800">
+          {/* Sidebar Header */}
+          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-800/80">
             <div className="flex items-center space-x-3">
-              <FileText className="w-6 h-6 text-indigo-400" />
-              <span className="font-bold text-lg whitespace-nowrap">Admin Panel</span>
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center text-white shadow-md shadow-indigo-900/40">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="font-bold text-base text-white tracking-tight block leading-tight">Psikogram Studio</span>
+                <span className="text-[10px] text-slate-400 font-medium tracking-wide uppercase">An-Nur Psycho Center</span>
+              </div>
             </div>
-            <button onClick={() => setIsSidebarOpen(false)} className="text-gray-400 hover:text-white">
-              <X className="w-6 h-6" />
+            <button 
+              onClick={() => setIsSidebarOpen(false)} 
+              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800/60 transition-colors"
+              title="Tutup Menu"
+            >
+              <X className="w-5 h-5" />
             </button>
           </div>
-          <div className="p-4 flex-1 overflow-y-auto">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 px-2 whitespace-nowrap">Generator Psikogram</p>
-            <nav className="space-y-2">
+
+          {/* Navigation Links */}
+          <div className="p-4 flex-1 overflow-y-auto custom-scrollbar">
+            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-3 px-3">Modul Laporan</p>
+            <nav className="space-y-1">
               <Link
                 to="/penjurusan"
                 onClick={() => setIsSidebarOpen(window.innerWidth >= 1024)}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeApp === 'penjurusan' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  activeApp === 'penjurusan' 
+                    ? 'bg-indigo-600/15 text-indigo-300 border border-indigo-500/30 shadow-xs' 
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+                }`}
               >
-                <Briefcase className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm font-medium text-left whitespace-nowrap">Tes Minat Bakat Penjurusan</span>
+                <Briefcase className="w-4 h-4 flex-shrink-0" />
+                <span className="text-left whitespace-nowrap">Tes Minat Bakat Penjurusan</span>
               </Link>
               <Link
                 to="/sd"
                 onClick={() => setIsSidebarOpen(window.innerWidth >= 1024)}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeApp === 'sd' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  activeApp === 'sd' 
+                    ? 'bg-indigo-600/15 text-indigo-300 border border-indigo-500/30 shadow-xs' 
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+                }`}
               >
-                <GraduationCap className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm font-medium text-left whitespace-nowrap">Tes Minat Bakat SD</span>
+                <GraduationCap className="w-4 h-4 flex-shrink-0" />
+                <span className="text-left whitespace-nowrap">Tes Minat Bakat SD</span>
               </Link>
               <Link
                 to="/cfit3"
                 onClick={() => setIsSidebarOpen(window.innerWidth >= 1024)}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeApp === 'cfit3' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  activeApp === 'cfit3' 
+                    ? 'bg-indigo-600/15 text-indigo-300 border border-indigo-500/30 shadow-xs' 
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+                }`}
               >
-                <Award className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm font-medium text-left whitespace-nowrap">Laporan Panti Clarak</span>
+                <Award className="w-4 h-4 flex-shrink-0" />
+                <span className="text-left whitespace-nowrap">Laporan Panti Clarak</span>
               </Link>
               <Link
                 to="/staff"
                 onClick={() => setIsSidebarOpen(window.innerWidth >= 1024)}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeApp === 'staff' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  activeApp === 'staff' 
+                    ? 'bg-indigo-600/15 text-indigo-300 border border-indigo-500/30 shadow-xs' 
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+                }`}
               >
-                <Users className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm font-medium text-left whitespace-nowrap">Tes Seleksi Staff</span>
+                <Users className="w-4 h-4 flex-shrink-0" />
+                <span className="text-left whitespace-nowrap">Tes Seleksi Staff</span>
               </Link>
               <Link
                 to="/staff-alu"
                 onClick={() => setIsSidebarOpen(window.innerWidth >= 1024)}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeApp === 'staff-alu' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  activeApp === 'staff-alu' 
+                    ? 'bg-indigo-600/15 text-indigo-300 border border-indigo-500/30 shadow-xs' 
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+                }`}
               >
-                <Building2 className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm font-medium text-left whitespace-nowrap">seleksi staf (Alam Lestari Unggul)</span>
+                <Building2 className="w-4 h-4 flex-shrink-0" />
+                <span className="text-left whitespace-nowrap">Seleksi Staf (ALU)</span>
               </Link>
               <Link
                 to="/manajer"
                 onClick={() => setIsSidebarOpen(window.innerWidth >= 1024)}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeApp === 'manajer' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  activeApp === 'manajer' 
+                    ? 'bg-indigo-600/15 text-indigo-300 border border-indigo-500/30 shadow-xs' 
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+                }`}
               >
-                <ShieldCheck className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm font-medium text-left whitespace-nowrap">Tes Seleksi Manajer</span>
+                <ShieldCheck className="w-4 h-4 flex-shrink-0" />
+                <span className="text-left whitespace-nowrap">Tes Seleksi Manajer</span>
               </Link>
               <Link
                 to="/markitdown"
                 onClick={() => setIsSidebarOpen(window.innerWidth >= 1024)}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeApp === 'markitdown' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  activeApp === 'markitdown' 
+                    ? 'bg-indigo-600/15 text-indigo-300 border border-indigo-500/30 shadow-xs' 
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+                }`}
               >
-                <FileDown className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm font-medium text-left whitespace-nowrap">Mark It Down</span>
+                <FileDown className="w-4 h-4 flex-shrink-0" />
+                <span className="text-left whitespace-nowrap">Mark It Down</span>
               </Link>
               <Link
                 to="/bei"
                 onClick={() => setIsSidebarOpen(window.innerWidth >= 1024)}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeApp === 'bei' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  activeApp === 'bei' 
+                    ? 'bg-indigo-600/15 text-indigo-300 border border-indigo-500/30 shadow-xs' 
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+                }`}
               >
-                <FileText className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm font-medium text-left whitespace-nowrap">Hasil BEI</span>
+                <FileText className="w-4 h-4 flex-shrink-0" />
+                <span className="text-left whitespace-nowrap">Hasil BEI</span>
               </Link>
             </nav>
           </div>
 
-          {/* AI Settings button in sidebar footer */}
-          <div className="p-4 border-t border-gray-800 bg-gray-950/40">
+          {/* AI Settings Footer Widget */}
+          <div className="p-4 border-t border-slate-800/80 bg-[#070a12]">
             <button
               onClick={() => setIsAISettingsOpen(true)}
-              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 text-gray-200 transition-all group"
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 text-slate-300 hover:text-white transition-all group shadow-2xs"
             >
               <div className="flex items-center space-x-2.5">
-                <Bot className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300" />
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <Bot className="w-4 h-4 text-slate-400 group-hover:text-indigo-400 transition-colors" />
                 <span className="text-xs font-medium">Pengaturan AI</span>
               </div>
-              <span className="text-[10px] font-mono font-semibold uppercase px-1.5 py-0.5 rounded bg-indigo-900/60 text-indigo-300 border border-indigo-700/50">
+              <span className="text-[10px] font-mono font-semibold uppercase px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700/60">
                 {aiSettings.provider}
               </span>
             </button>
@@ -472,33 +517,43 @@ export default function App() {
         </div>
       </div>
 
+      {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full min-w-0 print:block print:h-auto print:overflow-visible">
         
-        {/* Header - Hidden on print */}
-        <header className="bg-indigo-700 text-white shadow-md print:hidden flex-none z-10">
-          <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4 min-w-0">
+        {/* Header - Clean Modern Topbar */}
+        <header className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 text-slate-900 shadow-2xs print:hidden flex-none z-10 transition-colors">
+          <div className="px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5 min-w-0">
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="p-1 text-white hover:text-gray-200 focus:outline-none"
+                className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors focus:outline-none"
+                title="Toggle Menu"
               >
-                <Menu className="w-6 h-6" />
+                <Menu className="w-5 h-5" />
               </button>
-              <h1 className="text-xl font-bold tracking-tight truncate">
-                {activeApp === 'penjurusan' ? 'Psikogram Tes Minat Bakat Penjurusan' : activeApp === 'sd' ? 'Psikogram Tes Minat Bakat SD' : activeApp === 'cfit3' ? 'Laporan Panti Clarak (1 Lembar)' : activeApp === 'markitdown' ? 'Mark It Down Converter' : activeApp === 'bei' ? 'Hasil BEI' : activeApp === 'manajer' ? 'Psikogram Tes Seleksi Manajer' : activeApp === 'staff-alu' ? 'seleksi staf (Alam Lestari Unggul)' : 'Psikogram Tes Seleksi Staff'}
-              </h1>
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 truncate flex items-center gap-2">
+                  <span>
+                    {activeApp === 'penjurusan' ? 'Psikogram Tes Minat Bakat Penjurusan' : activeApp === 'sd' ? 'Psikogram Tes Minat Bakat SD' : activeApp === 'cfit3' ? 'Laporan Panti Clarak (1 Lembar)' : activeApp === 'markitdown' ? 'Mark It Down Converter' : activeApp === 'bei' ? 'Hasil BEI' : activeApp === 'manajer' ? 'Psikogram Tes Seleksi Manajer' : activeApp === 'staff-alu' ? 'Seleksi Staf (Alam Lestari Unggul)' : 'Psikogram Tes Seleksi Staff'}
+                  </span>
+                  <span className="hidden md:inline-flex text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                    Dokumen A4
+                  </span>
+                </h1>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2.5 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setIsAISettingsOpen(true)}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-800/90 hover:bg-indigo-900 border border-indigo-400/40 text-xs sm:text-sm font-medium text-white shadow transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200/90 text-xs sm:text-sm font-medium text-slate-700 hover:text-slate-900 shadow-2xs transition-all active:scale-[0.98]"
                 title="Konfigurasi AI Provider & API Key"
               >
-                <Bot className="w-4 h-4 text-indigo-300" />
-                <span className="hidden sm:inline">Pengaturan AI</span>
-                <span className="text-[11px] px-1.5 py-0.5 rounded bg-indigo-950/60 text-indigo-200 border border-indigo-400/30 uppercase tracking-wider font-semibold font-mono">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <Bot className="w-4 h-4 text-slate-500" />
+                <span className="hidden sm:inline">AI Config</span>
+                <span className="text-[11px] px-1.5 py-0.5 rounded bg-white text-slate-700 border border-slate-200 uppercase tracking-wider font-semibold font-mono shadow-2xs">
                   {aiSettings.provider}
                 </span>
               </button>
@@ -506,8 +561,8 @@ export default function App() {
           </div>
         </header>
 
-        {/* Main Content Area */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 print:p-0 print:m-0 overflow-hidden print:overflow-visible print:h-auto print:block">
+        {/* Content Canvas Stage */}
+        <main className="flex-1 p-4 sm:p-5 lg:p-6 print:p-0 print:m-0 overflow-hidden print:overflow-visible print:h-auto print:block">
           {activeApp === 'markitdown' ? (
             <div className="h-full overflow-y-auto custom-scrollbar">
               <MarkItDown />
@@ -517,10 +572,10 @@ export default function App() {
               <HasilBEI />
             </div>
           ) : (
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 print:block h-full print:h-auto">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 print:block h-full print:h-auto">
               
               {/* Left Column: Form Input (Hidden on print) */}
-              <div className="xl:col-span-5 2xl:col-span-4 print:hidden h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="xl:col-span-5 2xl:col-span-4 print:hidden h-full bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden">
                 <Routes>
                   <Route path="/penjurusan" element={
                     <div className="h-full overflow-y-auto custom-scrollbar">
@@ -556,9 +611,9 @@ export default function App() {
                 </Routes>
               </div>
 
-              {/* Right Column: Live Preview */}
-              <div className="xl:col-span-7 2xl:col-span-8 print:col-span-12 print:block flex justify-center h-full overflow-y-auto print:h-auto print:overflow-visible custom-scrollbar bg-gray-200 print:bg-white rounded-xl shadow-inner border border-gray-200"> 
-                 <div className="my-8 print:my-0 shadow-xl print:shadow-none bg-white">
+              {/* Right Column: Live Preview Canvas */}
+              <div className="xl:col-span-7 2xl:col-span-8 print:col-span-12 print:block flex justify-center h-full overflow-y-auto print:h-auto print:overflow-visible custom-scrollbar bg-[#f1f5f9] print:bg-white rounded-2xl border border-slate-200/70"> 
+                 <div className="my-6 print:my-0 shadow-lg shadow-slate-300/40 print:shadow-none bg-white rounded-xs border border-slate-200/60 print:border-none">
                    <Routes>
                      <Route path="/penjurusan" element={<PreviewPsikogram state={state} />} />
                      <Route path="/sd" element={<PreviewPsikogramSD state={sdState} />} />
