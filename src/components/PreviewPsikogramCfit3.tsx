@@ -4,6 +4,7 @@ import { Cfit3AppState, INITIAL_CFIT3_STATE } from '../types';
 import { getIqClassification, formatDateId, calculateAge } from '../utils/scoring';
 import { LOGO_ANNUR_BASE64 } from '../assets/logoAnnur';
 import { TTD_CHOZINA_BASE64, TTD_IKHSAN_BASE64 } from '../assets/tandaTangan';
+import { STEMPEL_ANNUR_BASE64 } from '../assets/stempel';
 import { FileText, Printer, Download, Loader2 } from 'lucide-react';
 
 interface PreviewPsikogramCfit3Props {
@@ -573,14 +574,34 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
               <td style={{ width: '42%', border: 'none', textAlign: 'center', fontSize: '8.5px', lineHeight: '1.15' }}>
                 <div>{psikolog?.kota || 'Probolinggo'}, {testDateFormatted || currentDateFormatted}</div>
                 <div style={{ fontWeight: 500, marginBottom: '2px' }}>Psikolog Pemeriksa,</div>
-                <div style={{ height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '1px 0' }}>
+                <div style={{ height: '46px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '1px 0' }}>
+                  {/* Stempel AN-NUR (Cap Resmi menimpa sisi kiri tanda tangan) */}
+                  <img
+                    src={STEMPEL_ANNUR_BASE64}
+                    alt="Stempel AN-NUR Psycho Center"
+                    style={{
+                      position: 'absolute',
+                      left: '18px',
+                      top: '-5px',
+                      width: '56px',
+                      height: '56px',
+                      objectFit: 'contain',
+                      mixBlendMode: 'multiply',
+                      opacity: 0.88,
+                      pointerEvents: 'none',
+                      zIndex: 1
+                    }}
+                  />
+                  {/* Tanda Tangan */}
                   <img
                     src={signatureBase64}
                     alt={isChozina ? "Tanda Tangan Chozina" : "Tanda Tangan Muhammad Ikhsan"}
                     style={{
-                      maxHeight: '40px',
+                      maxHeight: '44px',
                       maxWidth: '120px',
                       objectFit: 'contain',
+                      position: 'relative',
+                      zIndex: 2,
                       display: 'inline-block'
                     }}
                   />
