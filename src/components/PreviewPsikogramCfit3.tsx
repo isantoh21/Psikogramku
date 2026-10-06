@@ -162,9 +162,10 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
       type: 'application/msword'
     });
     const url = URL.createObjectURL(blob);
+    const cleanName = (clientData.nama || 'Anak').trim().replace(/[/\\?%*:|"<>]/g, '');
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Laporan_Panti_Clarak_${(clientData.nama || 'Klien').replace(/\s+/g, '_')}.doc`;
+    link.download = `${cleanName}_Hasil Tes Bakat Minat.doc`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -196,8 +197,9 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
         compress: true,
       });
 
+      const cleanName = (clientData.nama || 'Anak').trim().replace(/[/\\?%*:|"<>]/g, '');
       pdf.addImage(imgData, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
-      pdf.save(`Laporan_Panti_Clarak_${(clientData.nama || 'Klien').replace(/\s+/g, '_')}.pdf`);
+      pdf.save(`${cleanName}_Hasil Tes Bakat Minat.pdf`);
     } catch (err) {
       console.error('PDF export failed:', err);
       window.print();
@@ -220,8 +222,9 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
         backgroundColor: '#ffffff'
       });
 
+      const cleanName = (clientData.nama || 'Anak').trim().replace(/[/\\?%*:|"<>]/g, '');
       const link = document.createElement('a');
-      link.download = `Laporan_Panti_Clarak_${(clientData.nama || 'Klien').replace(/\s+/g, '_')}.jpg`;
+      link.download = `${cleanName}_Hasil Tes Bakat Minat.jpg`;
       link.href = canvas.toDataURL('image/jpeg', 0.95);
       document.body.appendChild(link);
       link.click();
@@ -234,8 +237,14 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
   }, [clientData.nama, isExportingImage]);
 
   const handlePrint = useCallback(() => {
+    const cleanName = (clientData.nama || 'Anak').trim().replace(/[/\\?%*:|"<>]/g, '');
+    const prevTitle = document.title;
+    document.title = `${cleanName}_Hasil Tes Bakat Minat`;
     window.print();
-  }, []);
+    setTimeout(() => {
+      document.title = prevTitle;
+    }, 1000);
+  }, [clientData.nama]);
 
   const getStar = (val: number, expected: number) => {
     return val === expected ? '✬' : '';
