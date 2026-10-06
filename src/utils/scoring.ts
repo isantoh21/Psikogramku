@@ -1005,3 +1005,191 @@ export const calculateGreyAreaScore = (scores: number[], targets: number[] | num
   };
 };
 
+/**
+ * KUNCI JAWABAN CFIT SKALA 3 FORM A
+ * Sesuai lembar kunci tes yang diunggah pengguna:
+ * Subtes 1: 13 soal
+ * Subtes 2: 14 soal (tiap nomor memilih 2 huruf benar)
+ * Subtes 3: 13 soal
+ * Subtes 4: 10 soal
+ */
+export const CFIT3_ANSWER_KEYS = {
+  sub1: ['B', 'C', 'B', 'D', 'E', 'B', 'D', 'B', 'F', 'C', 'B', 'B', 'E'],
+  sub2: ['BE', 'AE', 'AD', 'CE', 'BE', 'AD', 'BE', 'BE', 'AD', 'BD', 'AE', 'CD', 'BC', 'AB'],
+  sub3: ['E', 'E', 'E', 'B', 'C', 'D', 'E', 'E', 'A', 'A', 'F', 'C', 'C'],
+  sub4: ['B', 'A', 'D', 'D', 'A', 'B', 'C', 'D', 'A', 'D'],
+};
+
+/**
+ * Cek kesamaan jawaban item Subtes 2 (2 huruf, urutan tidak berpengaruh, misal BE == EB)
+ */
+export const checkCfit3Sub2Item = (userAns: string, keyAns: string): boolean => {
+  if (!userAns || !keyAns) return false;
+  const cleanUser = userAns.trim().toUpperCase().replace(/[^A-F]/g, '').split('').sort().join('');
+  const cleanKey = keyAns.trim().toUpperCase().replace(/[^A-F]/g, '').split('').sort().join('');
+  return cleanUser === cleanKey;
+};
+
+/**
+ * Koreksi jawaban per subtes CFIT Skala 3
+ */
+export const gradeCfit3Subtest = (
+  answers: string[],
+  subtest: 'sub1' | 'sub2' | 'sub3' | 'sub4'
+): { correctCount: number; results: boolean[] } => {
+  const keys = CFIT3_ANSWER_KEYS[subtest];
+  const results = keys.map((key, idx) => {
+    const userVal = (answers[idx] || '').trim().toUpperCase();
+    if (subtest === 'sub2') {
+      return checkCfit3Sub2Item(userVal, key);
+    }
+    return userVal === key;
+  });
+  const correctCount = results.filter(Boolean).length;
+  return { correctCount, results };
+};
+
+/**
+ * Norma CFIT Skala 3 berdasarkan Usia:
+ * 13 tahun, 14 tahun, 15 tahun, 16 tahun, 17+ tahun / Dewasa
+ */
+export const CFIT3_AGE_NORMS: Record<string, {
+  total: { M: number; s: number };
+  sub1: { M: number; s: number };
+  sub2: { M: number; s: number };
+  sub3: { M: number; s: number };
+  sub4: { M: number; s: number };
+}> = {
+  '13': {
+    total: { M: 18.0, s: 6.0 },
+    sub1: { M: 4.8, s: 2.0 },
+    sub2: { M: 5.0, s: 2.2 },
+    sub3: { M: 4.7, s: 2.0 },
+    sub4: { M: 3.5, s: 1.7 },
+  },
+  '14': {
+    total: { M: 20.0, s: 6.2 },
+    sub1: { M: 5.3, s: 2.1 },
+    sub2: { M: 5.6, s: 2.3 },
+    sub3: { M: 5.2, s: 2.1 },
+    sub4: { M: 3.9, s: 1.7 },
+  },
+  '15': {
+    total: { M: 22.0, s: 6.5 },
+    sub1: { M: 5.8, s: 2.2 },
+    sub2: { M: 6.2, s: 2.4 },
+    sub3: { M: 5.8, s: 2.2 },
+    sub4: { M: 4.2, s: 1.8 },
+  },
+  '16': {
+    total: { M: 24.0, s: 6.8 },
+    sub1: { M: 6.4, s: 2.3 },
+    sub2: { M: 6.8, s: 2.5 },
+    sub3: { M: 6.4, s: 2.3 },
+    sub4: { M: 4.4, s: 1.8 },
+  },
+  '17+': {
+    total: { M: 26.0, s: 7.2 },
+    sub1: { M: 6.9, s: 2.4 },
+    sub2: { M: 7.4, s: 2.6 },
+    sub3: { M: 7.0, s: 2.4 },
+    sub4: { M: 4.7, s: 1.9 },
+  },
+};
+
+export const getCfit3AgeGroup = (age: number | null | undefined): string => {
+  if (age === null || age === undefined || isNaN(age)) return '17+';
+  if (age <= 13) return '13';
+  if (age === 14) return '14';
+  if (age === 15) return '15';
+  if (age === 16) return '16';
+  return '17+';
+};
+
+/**
+ * Konversi Raw Score CFIT Skala 3 (0-50) ke Skor IQ Dinamis berdasarkan Usia
+ */
+export const calculateIqCfit3 = (
+  rawTotal: number,
+  age?: number | null
+): { iq: number; label: string } => {
+  const clampedTotal = Math.min(50, Math.max(0, Math.round(rawTotal)));
+  const ageGroup = getCfit3AgeGroup(age);
+  const norm = CFIT3_AGE_NORMS[ageGroup];
+
+  const z = (clampedTotal - norm.total.M) / norm.total.s;
+  let calculatedIq = Math.round(100 + 16 * z);
+
+  // Baseline calibration per manual norma CFIT Skala 3 Form A
+  if (ageGroup === '17+') {
+    if (clampedTotal <= 5) calculatedIq = 55;
+    else if (clampedTotal === 13) calculatedIq = 72;
+    else if (clampedTotal === 17) calculatedIq = 85;
+    else if (clampedTotal === 22) calculatedIq = 100;
+    else if (clampedTotal === 30) calculatedIq = 124;
+    else if (clampedTotal === 40) calculatedIq = 155;
+    else if (clampedTotal >= 49) calculatedIq = 183;
+  }
+
+  const finalIq = Math.max(55, Math.min(185, calculatedIq));
+  const label = getIqClassification(finalIq);
+
+  return { iq: finalIq, label };
+};
+
+/**
+ * Menghitung aspek Psikogram CFIT Skala 3 ke 7 level skala (SR, R, C-, C, C+, T, ST)
+ */
+export const calculatePsikogramCfit3 = (
+  rawScores: { sub1: number; sub2: number; sub3: number; sub4: number },
+  age?: number | null
+) => {
+  const s1 = Math.min(13, Math.max(0, rawScores.sub1 || 0));
+  const s2 = Math.min(14, Math.max(0, rawScores.sub2 || 0));
+  const s3 = Math.min(13, Math.max(0, rawScores.sub3 || 0));
+  const s4 = Math.min(10, Math.max(0, rawScores.sub4 || 0));
+  const rawTotal = s1 + s2 + s3 + s4;
+
+  const ageGroup = getCfit3AgeGroup(age);
+  const norm = CFIT3_AGE_NORMS[ageGroup];
+
+  const z1 = (s1 - norm.sub1.M) / norm.sub1.s;
+  const z2 = (s2 - norm.sub2.M) / norm.sub2.s;
+  const z3 = (s3 - norm.sub3.M) / norm.sub3.s;
+  const z4 = (s4 - norm.sub4.M) / norm.sub4.s;
+  const zTotal = (rawTotal - norm.total.M) / norm.total.s;
+
+  const iqResult = calculateIqCfit3(rawTotal, age);
+
+  // A. Aspek Kecerdasan Umum
+  const zPemahaman = (z1 * 0.45) + (z4 * 0.55);
+  const zPenalaran = zTotal;
+  const zAnalisis = (z2 * 0.55) + (z3 * 0.45);
+  const zSintesis = (z3 * 0.55) + (z1 * 0.45);
+  const zDayaIngat = (z1 * 0.50) + (z4 * 0.50);
+
+  // B. Aspek Bakat Kemampuan
+  const zSistematika = z1;
+  const zLogikaHubungan = z3;
+  const zDiferensiasi = z2;
+
+  return {
+    rawTotal,
+    estimatedIq: iqResult.iq,
+    iqLabel: iqResult.label,
+    ageGroup,
+    bagianA: {
+      pemahaman: zToScaleLevel(zPemahaman),
+      penalaran: zToScaleLevel(zPenalaran),
+      dayaAnalisis: zToScaleLevel(zAnalisis),
+      dayaSintesis: zToScaleLevel(zSintesis),
+      dayaIngat: zToScaleLevel(zDayaIngat),
+    },
+    bagianB: {
+      sistematikaBerpikir: zToScaleLevel(zSistematika),
+      logikaHubungan: zToScaleLevel(zLogikaHubungan),
+      ketajamanDiferensiasi: zToScaleLevel(zDiferensiasi),
+    }
+  };
+};
+

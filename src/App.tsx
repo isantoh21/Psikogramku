@@ -10,12 +10,14 @@ import { FormInputStaffAlu } from './components/FormInputStaffAlu';
 import { PreviewPsikogramStaffAlu } from './components/PreviewPsikogramStaffAlu';
 import { FormInputManajer } from './components/FormInputManajer';
 import { PreviewPsikogramManajer } from './components/PreviewPsikogramManajer';
+import { FormInputCfit3 } from './components/FormInputCfit3';
+import { PreviewPsikogramCfit3 } from './components/PreviewPsikogramCfit3';
 import { MarkItDown } from './components/MarkItDown';
 import { HasilBEI } from './components/HasilBEI';
 import { AISettingsModal } from './components/AISettingsModal';
 import { getAISettings, AISettings } from './utils/aiSettings';
-import { AppState, SdAppState, StaffAppState, ManagerAppState, StaffAluAppState, INITIAL_STATE, INITIAL_SD_STATE, INITIAL_STAFF_STATE, INITIAL_MANAGER_STATE, INITIAL_STAFF_ALU_STATE } from './types';
-import { FileText, Menu, X, Briefcase, GraduationCap, Users, FileDown, Settings, Bot, Sparkles, ShieldCheck, Building2 } from 'lucide-react';
+import { AppState, SdAppState, StaffAppState, ManagerAppState, StaffAluAppState, Cfit3AppState, INITIAL_STATE, INITIAL_SD_STATE, INITIAL_STAFF_STATE, INITIAL_MANAGER_STATE, INITIAL_STAFF_ALU_STATE, INITIAL_CFIT3_STATE } from './types';
+import { FileText, Menu, X, Briefcase, GraduationCap, Users, FileDown, Settings, Bot, Sparkles, ShieldCheck, Building2, Award } from 'lucide-react';
 
 export default function App() {
   const location = useLocation();
@@ -31,7 +33,9 @@ export default function App() {
             ? 'staff' 
             : location.pathname.includes('/sd') 
               ? 'sd' 
-              : 'penjurusan';
+              : location.pathname.includes('/cfit3')
+                ? 'cfit3'
+                : 'penjurusan';
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isAISettingsOpen, setIsAISettingsOpen] = useState(false);
   const [aiSettings, setAiSettings] = useState<AISettings>(getAISettings());
@@ -41,6 +45,7 @@ export default function App() {
   const [staffState, setStaffState] = useState<StaffAppState>(INITIAL_STAFF_STATE);
   const [staffAluState, setStaffAluState] = useState<StaffAluAppState>(INITIAL_STAFF_ALU_STATE);
   const [managerState, setManagerState] = useState<ManagerAppState>(INITIAL_MANAGER_STATE);
+  const [cfit3State, setCfit3State] = useState<Cfit3AppState>(INITIAL_CFIT3_STATE);
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Load from LocalStorage on mount
@@ -247,6 +252,43 @@ export default function App() {
       }
     }
 
+    const savedCfit3 = localStorage.getItem('psikogramCfit3State');
+    if (savedCfit3) {
+      try {
+        const parsed = JSON.parse(savedCfit3);
+        if (parsed && typeof parsed === 'object') {
+          setCfit3State({
+            ...INITIAL_CFIT3_STATE,
+            ...parsed,
+            clientData: {
+              ...INITIAL_CFIT3_STATE.clientData,
+              ...(parsed.clientData || {})
+            },
+            cfitScores: {
+              ...INITIAL_CFIT3_STATE.cfitScores,
+              ...(parsed.cfitScores || {})
+            },
+            rawAnswers: {
+              ...INITIAL_CFIT3_STATE.rawAnswers,
+              ...(parsed.rawAnswers || {})
+            },
+            kecerdasanUmum: {
+              ...INITIAL_CFIT3_STATE.kecerdasanUmum,
+              ...(parsed.kecerdasanUmum || {})
+            },
+            bakatKemampuan: {
+              ...INITIAL_CFIT3_STATE.bakatKemampuan,
+              ...(parsed.bakatKemampuan || {})
+            },
+            rmibInterests: Array.isArray(parsed.rmibInterests) ? parsed.rmibInterests : INITIAL_CFIT3_STATE.rmibInterests,
+            dreamJobs: Array.isArray(parsed.dreamJobs) ? parsed.dreamJobs : INITIAL_CFIT3_STATE.dreamJobs,
+          });
+        }
+      } catch (e) {
+        console.error('Failed to parse local storage CFIT3', e);
+      }
+    }
+
     setIsLoaded(true);
   }, []);
 
@@ -258,8 +300,9 @@ export default function App() {
       if (staffState) localStorage.setItem('psikogramStaffState', JSON.stringify(staffState));
       if (staffAluState) localStorage.setItem('psikogramStaffAluState', JSON.stringify(staffAluState));
       if (managerState) localStorage.setItem('psikogramManagerState', JSON.stringify(managerState));
+      if (cfit3State) localStorage.setItem('psikogramCfit3State', JSON.stringify(cfit3State));
     }
-  }, [state, sdState, staffState, staffAluState, managerState, isLoaded]);
+  }, [state, sdState, staffState, staffAluState, managerState, cfit3State, isLoaded]);
 
   const updateState = (section: keyof AppState, field: string, value: any) => {
     if (section === 'recommendation' || section === 'interests' || section === 'learningStyle') {
@@ -361,6 +404,14 @@ export default function App() {
                 <span className="text-sm font-medium text-left whitespace-nowrap">Tes Minat Bakat SD</span>
               </Link>
               <Link
+                to="/cfit3"
+                onClick={() => setIsSidebarOpen(window.innerWidth >= 1024)}
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeApp === 'cfit3' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+              >
+                <Award className="w-5 h-5 flex-shrink-0" />
+                <span className="text-sm font-medium text-left whitespace-nowrap">Laporan CFIT Skala 3</span>
+              </Link>
+              <Link
                 to="/staff"
                 onClick={() => setIsSidebarOpen(window.innerWidth >= 1024)}
                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeApp === 'staff' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
@@ -434,7 +485,7 @@ export default function App() {
                 <Menu className="w-6 h-6" />
               </button>
               <h1 className="text-xl font-bold tracking-tight truncate">
-                {activeApp === 'penjurusan' ? 'Psikogram Tes Minat Bakat Penjurusan' : activeApp === 'sd' ? 'Psikogram Tes Minat Bakat SD' : activeApp === 'markitdown' ? 'Mark It Down Converter' : activeApp === 'bei' ? 'Hasil BEI' : activeApp === 'manajer' ? 'Psikogram Tes Seleksi Manajer' : activeApp === 'staff-alu' ? 'seleksi staf (Alam Lestari Unggul)' : 'Psikogram Tes Seleksi Staff'}
+                {activeApp === 'penjurusan' ? 'Psikogram Tes Minat Bakat Penjurusan' : activeApp === 'sd' ? 'Psikogram Tes Minat Bakat SD' : activeApp === 'cfit3' ? 'Laporan CFIT Skala 3 (1 Lembar)' : activeApp === 'markitdown' ? 'Mark It Down Converter' : activeApp === 'bei' ? 'Hasil BEI' : activeApp === 'manajer' ? 'Psikogram Tes Seleksi Manajer' : activeApp === 'staff-alu' ? 'seleksi staf (Alam Lestari Unggul)' : 'Psikogram Tes Seleksi Staff'}
               </h1>
             </div>
 
@@ -481,6 +532,11 @@ export default function App() {
                       <FormInputSD state={sdState} setState={setSdState} />
                     </div>
                   } />
+                  <Route path="/cfit3" element={
+                    <div className="h-full overflow-y-auto custom-scrollbar">
+                      <FormInputCfit3 state={cfit3State} setState={setCfit3State} />
+                    </div>
+                  } />
                   <Route path="/staff" element={
                     <div className="h-full overflow-y-auto custom-scrollbar">
                       <FormInputStaff state={staffState} setState={setStaffState} />
@@ -506,6 +562,7 @@ export default function App() {
                    <Routes>
                      <Route path="/penjurusan" element={<PreviewPsikogram state={state} />} />
                      <Route path="/sd" element={<PreviewPsikogramSD state={sdState} />} />
+                     <Route path="/cfit3" element={<PreviewPsikogramCfit3 state={cfit3State} />} />
                      <Route path="/staff" element={<PreviewPsikogramStaff state={staffState} />} />
                      <Route path="/staff-alu" element={<PreviewPsikogramStaffAlu state={staffAluState} />} />
                      <Route path="/manajer" element={<PreviewPsikogramManajer state={managerState} />} />

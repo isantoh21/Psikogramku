@@ -524,3 +524,100 @@ export const INITIAL_STAFF_ALU_STATE: StaffAluAppState = {
   dinamikaPsikologis: '',
 };
 
+export interface Cfit3ClientData {
+  nama: string;
+  tanggalLahir: string;
+  jenisKelamin: 'Laki-laki' | 'Perempuan' | '';
+  pendidikan: 'SMP' | 'SMA' | 'SMK' | 'Mahasiswa' | 'Dewasa/Umum' | '';
+  asalSekolah: string;
+  tanggalTes: string;
+  nomorLaporan?: string;
+}
+
+export interface Cfit3Subscores {
+  sub1: number | '';
+  sub2: number | '';
+  sub3: number | '';
+  sub4: number | '';
+}
+
+export interface Cfit3RawAnswers {
+  sub1: string[];
+  sub2: string[];
+  sub3: string[];
+  sub4: string[];
+}
+
+export interface Cfit3KecerdasanUmum {
+  pemahaman: ScaleLevel;
+  penalaran: ScaleLevel;
+  dayaAnalisis: ScaleLevel;
+  dayaSintesis: ScaleLevel;
+  dayaIngat: ScaleLevel;
+}
+
+export interface Cfit3BakatKemampuan {
+  sistematikaBerpikir: ScaleLevel;
+  logikaHubungan: ScaleLevel;
+  ketajamanDiferensiasi: ScaleLevel;
+}
+
+export interface Cfit3AppState {
+  clientData: Cfit3ClientData;
+  iqScore: number | '';
+  iqLabel: string;
+  rawScoreTotal: number | '';
+  cfitScores: Cfit3Subscores;
+  rawAnswers: Cfit3RawAnswers;
+  kecerdasanUmum: Cfit3KecerdasanUmum;
+  bakatKemampuan: Cfit3BakatKemampuan;
+  rmibInterests: Interest[];
+  dreamJobs: string[];
+  rekomendasi: string;
+}
+
+export const INITIAL_CFIT3_STATE: Cfit3AppState = {
+  clientData: {
+    nama: '',
+    tanggalLahir: '',
+    jenisKelamin: '',
+    pendidikan: 'SMP',
+    asalSekolah: '',
+    tanggalTes: '',
+    nomorLaporan: '',
+  },
+  iqScore: '',
+  iqLabel: '',
+  rawScoreTotal: '',
+  cfitScores: {
+    sub1: '',
+    sub2: '',
+    sub3: '',
+    sub4: '',
+  },
+  rawAnswers: {
+    sub1: Array(13).fill(''),
+    sub2: Array(14).fill(''),
+    sub3: Array(13).fill(''),
+    sub4: Array(10).fill(''),
+  },
+  kecerdasanUmum: {
+    pemahaman: 4,
+    penalaran: 4,
+    dayaAnalisis: 4,
+    dayaSintesis: 4,
+    dayaIngat: 4,
+  },
+  bakatKemampuan: {
+    sistematikaBerpikir: 4,
+    logikaHubungan: 4,
+    ketajamanDiferensiasi: 4,
+  },
+  rmibInterests: [
+    { name: 'Scientific (Sci)', description: 'Minat yang berkaitan dengan penyelidikan, penemuan, riset, analisis ilmiah, atau eksperimen di laboratorium.' },
+    { name: 'Computational (Comp)', description: 'Minat terhadap pekerjaan yang banyak menggunakan angka-angka, perhitungan, pembukuan, atau manipulasi data matematis.' },
+    { name: 'Mechanical (Mech)', description: 'Minat terhadap pekerjaan yang berhubungan dengan mesin, alat mekanis, perkakas, listrik, atau peralatan teknik.' },
+  ],
+  dreamJobs: ['', '', ''],
+  rekomendasi: '',
+};
