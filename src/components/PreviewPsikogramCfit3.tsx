@@ -583,37 +583,41 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
               <td style={{ width: '42%', border: 'none', textAlign: 'center', fontSize: '8.5px', lineHeight: '1.15' }}>
                 <div>{psikolog?.kota || 'Probolinggo'}, {testDateFormatted || currentDateFormatted}</div>
                 <div style={{ fontWeight: 500, marginBottom: '2px' }}>Psikolog Pemeriksa,</div>
-                <div style={{ height: '46px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '1px 0' }}>
-                  {/* Stempel AN-NUR (Cap Resmi menimpa sisi kiri tanda tangan) */}
-                  <img
-                    src={STEMPEL_ANNUR_BASE64}
-                    alt="Stempel AN-NUR Psycho Center"
-                    style={{
-                      position: 'absolute',
-                      left: '18px',
-                      top: '-5px',
-                      width: '56px',
-                      height: '56px',
-                      objectFit: 'contain',
-                      mixBlendMode: 'multiply',
-                      opacity: 0.88,
-                      pointerEvents: 'none',
-                      zIndex: 1
-                    }}
-                  />
-                  {/* Tanda Tangan */}
-                  <img
-                    src={signatureBase64}
-                    alt={isChozina ? "Tanda Tangan Chozina" : "Tanda Tangan Muhammad Ikhsan"}
-                    style={{
-                      maxHeight: '44px',
-                      maxWidth: '120px',
-                      objectFit: 'contain',
-                      position: 'relative',
-                      zIndex: 2,
-                      display: 'inline-block'
-                    }}
-                  />
+                <div style={{ height: '62px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '2px 0' }}>
+                  <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {/* Stempel AN-NUR (Cap Resmi menimpa sisi kiri tanda tangan secara presisi & tajam) */}
+                    <img
+                      src={STEMPEL_ANNUR_BASE64}
+                      alt="Stempel AN-NUR Psycho Center"
+                      style={{
+                        position: 'absolute',
+                        left: isChozina ? '-36px' : '-28px',
+                        top: '-8px',
+                        width: '68px',
+                        height: '68px',
+                        objectFit: 'contain',
+                        mixBlendMode: 'multiply',
+                        filter: 'contrast(1.45) saturate(1.2) brightness(0.96)',
+                        imageRendering: '-webkit-optimize-contrast',
+                        pointerEvents: 'none',
+                        zIndex: 1
+                      }}
+                    />
+                    {/* Tanda Tangan (Ukuran diperbesar agar proporsional dan jelas) */}
+                    <img
+                      src={signatureBase64}
+                      alt={isChozina ? "Tanda Tangan Chozina" : "Tanda Tangan Muhammad Ikhsan"}
+                      style={{
+                        height: isChozina ? '58px' : '52px',
+                        maxHeight: '60px',
+                        maxWidth: '145px',
+                        objectFit: 'contain',
+                        position: 'relative',
+                        zIndex: 2,
+                        display: 'block'
+                      }}
+                    />
+                  </div>
                 </div>
                 <div>
                   <span style={{ fontWeight: 'bold', borderBottom: '1px solid black', display: 'inline-block', padding: '0 4px' }}>
