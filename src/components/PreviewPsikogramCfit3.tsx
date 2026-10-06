@@ -468,17 +468,17 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
         <div style={{ marginBottom: '6px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black', textAlign: 'center', fontSize: '8.5px', lineHeight: '1.15' }}>
             <thead>
-              <tr style={{ backgroundColor: '#f3f4f6' }}>
-                <th style={{ border: '1px solid black', padding: '2px', fontWeight: 'bold', textAlign: 'center', width: '20%' }} rowSpan={2}>
+              <tr>
+                <th style={{ border: '1px solid black', padding: '2px', fontWeight: 'bold', textAlign: 'center', width: '20%', backgroundColor: '#f3f4f6', verticalAlign: 'middle' }} rowSpan={2}>
                   PSIKOGRAM<br />Taraf Kecerdasan (CFIT)
                 </th>
-                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Sangat Rendah<br />&lt; 70</th>
-                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Rendah<br />70 - 79</th>
-                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Rata-rata Bawah<br />80 - 89</th>
-                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Rata-rata<br />90 - 109</th>
-                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Rata-rata Atas<br />110 - 119</th>
-                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Tinggi<br />120 - 129</th>
-                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Sangat Tinggi<br />&ge; 130</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%', backgroundColor: '#f3f4f6' }}>Sangat Rendah<br />&lt; 70</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%', backgroundColor: '#f3f4f6' }}>Rendah<br />70 - 79</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%', backgroundColor: '#f3f4f6' }}>Rata-rata Bawah<br />80 - 89</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%', backgroundColor: '#f3f4f6' }}>Rata-rata<br />90 - 109</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%', backgroundColor: '#f3f4f6' }}>Rata-rata Atas<br />110 - 119</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%', backgroundColor: '#f3f4f6' }}>Tinggi<br />120 - 129</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%', backgroundColor: '#f3f4f6' }}>Sangat Tinggi<br />&ge; 130</th>
               </tr>
               <tr style={{ height: '18px' }}>
                 <td style={{ border: '1px solid black', fontWeight: 'bold', fontSize: '12px' }}>{iqNum !== null && iqNum < 70 ? '✓' : ''}</td>
@@ -509,19 +509,19 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
         <div style={{ marginBottom: '6px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black' }}>
             <thead>
-              <tr style={{ backgroundColor: '#f3f4f6', fontSize: '9px' }}>
-                <th style={{ border: '1px solid black', padding: '1.5px', width: '4%' }} rowSpan={2}>No</th>
-                <th style={{ border: '1px solid black', padding: '1.5px 4px', textAlign: 'left' }} rowSpan={2}>Aspek Psikologis</th>
-                <th style={{ border: '1px solid black', padding: '1.5px', textAlign: 'center' }} colSpan={7}>Kapasitas Aspek</th>
+              <tr style={{ fontSize: '9px' }}>
+                <th style={{ border: '1px solid black', padding: '2px 4px', width: '4%', backgroundColor: '#f3f4f6', verticalAlign: 'middle', textAlign: 'center' }} rowSpan={2}>No</th>
+                <th style={{ border: '1px solid black', padding: '2px 6px', textAlign: 'left', backgroundColor: '#f3f4f6', verticalAlign: 'middle' }} rowSpan={2}>Aspek Psikologis</th>
+                <th style={{ border: '1px solid black', padding: '2px 4px', textAlign: 'center', backgroundColor: '#f3f4f6' }} colSpan={7}>Kapasitas Aspek</th>
               </tr>
-              <tr style={{ backgroundColor: '#e5e7eb', fontSize: '8px', textAlign: 'center', fontWeight: 'bold' }}>
-                <th style={{ border: '1px solid black', padding: '1px', width: '6.5%' }}>SR</th>
-                <th style={{ border: '1px solid black', padding: '1px', width: '6.5%' }}>R</th>
-                <th style={{ border: '1px solid black', padding: '1px', width: '6.5%' }}>C-</th>
-                <th style={{ border: '1px solid black', padding: '1px', width: '6.5%' }}>C</th>
-                <th style={{ border: '1px solid black', padding: '1px', width: '6.5%' }}>C+</th>
-                <th style={{ border: '1px solid black', padding: '1px', width: '6.5%' }}>T</th>
-                <th style={{ border: '1px solid black', padding: '1px', width: '6.5%' }}>ST</th>
+              <tr style={{ fontSize: '8px', textAlign: 'center', fontWeight: 'bold' }}>
+                <th style={{ border: '1px solid black', padding: '1.5px 1px', width: '6.5%', backgroundColor: '#e5e7eb' }}>SR</th>
+                <th style={{ border: '1px solid black', padding: '1.5px 1px', width: '6.5%', backgroundColor: '#e5e7eb' }}>R</th>
+                <th style={{ border: '1px solid black', padding: '1.5px 1px', width: '6.5%', backgroundColor: '#e5e7eb' }}>C-</th>
+                <th style={{ border: '1px solid black', padding: '1.5px 1px', width: '6.5%', backgroundColor: '#e5e7eb' }}>C</th>
+                <th style={{ border: '1px solid black', padding: '1.5px 1px', width: '6.5%', backgroundColor: '#e5e7eb' }}>C+</th>
+                <th style={{ border: '1px solid black', padding: '1.5px 1px', width: '6.5%', backgroundColor: '#e5e7eb' }}>T</th>
+                <th style={{ border: '1px solid black', padding: '1.5px 1px', width: '6.5%', backgroundColor: '#e5e7eb' }}>ST</th>
               </tr>
             </thead>
             <tbody>
