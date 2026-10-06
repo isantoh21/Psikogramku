@@ -5,7 +5,7 @@ import { LOGO_ANNUR_BASE64 } from '../assets/logoAnnur';
 import { TTD_CHOZINA_BASE64, TTD_IKHSAN_BASE64 } from '../assets/tandaTangan';
 import { STEMPEL_ANNUR_BASE64 } from '../assets/stempel';
 import { FileText, Printer, Download, Loader2 } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 
 // Helper membuat background stempel transparan alami tanpa mix-blend-mode (anti-crash html2canvas)
@@ -251,9 +251,9 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
 
       pdf.addImage(imgData, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
       pdf.save(`${cleanName}_Hasil Tes Bakat Minat.pdf`);
-    } catch (err) {
+    } catch (err: any) {
       console.error('PDF export failed:', err);
-      alert('Gagal membuat file PDF. Silakan gunakan tombol "Cetak" dan pilih printer "Save as PDF / Simpan sebagai PDF".');
+      alert(`Gagal membuat file PDF (${err?.message || 'Error'}). Silakan gunakan tombol "Cetak" dan pilih printer "Save as PDF / Simpan sebagai PDF".`);
     } finally {
       setIsExportingPdf(false);
     }
@@ -287,9 +287,9 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Image export failed:', err);
-      alert('Gagal menyimpan gambar laporan.');
+      alert(`Gagal menyimpan gambar laporan (${err?.message || 'Error'}).`);
     } finally {
       setIsExportingImage(false);
     }
