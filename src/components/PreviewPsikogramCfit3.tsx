@@ -1,6 +1,7 @@
 import React from 'react';
 import { Cfit3AppState, INITIAL_CFIT3_STATE } from '../types';
 import { getIqClassification, formatDateId, calculateAge } from '../utils/scoring';
+import { LOGO_ANNUR_BASE64 } from '../assets/logoAnnur';
 import { FileText, Printer } from 'lucide-react';
 
 interface PreviewPsikogramCfit3Props {
@@ -128,11 +129,14 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
           {/* Header Kop Surat */}
           <div className="flex items-center justify-between border-b-2 border-black pb-2 mb-2">
             <div className="flex items-center">
-              <div className="w-14 h-14 mr-3 border-2 border-green-700 rounded-full flex items-center justify-center p-1 flex-shrink-0">
-                <div className="text-green-700 font-bold text-center text-[7.5px] leading-tight">
-                  AN-NUR<br/>Psycho<br/>Center
-                </div>
-              </div>
+              <img 
+                src={LOGO_ANNUR_BASE64} 
+                alt="Logo AN-NUR Psycho Center" 
+                width="72"
+                height="72"
+                style={{ width: '72px', height: '72px', objectFit: 'contain' }}
+                className="w-16 h-16 mr-3 object-contain flex-shrink-0"
+              />
               <div>
                 <h1 className="text-base font-bold uppercase tracking-wide leading-tight">AN-NUR PSYCHO CENTER</h1>
                 <p className="text-[9.5px] leading-tight text-gray-800">Layanan Konsultasi, Edukasi, dan Tes Psikologi Kota Probolinggo</p>
