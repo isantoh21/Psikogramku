@@ -194,11 +194,18 @@ export async function callUnifiedAI({
     if (!apiKey) {
       throw new Error('GROQ_API_KEY belum dikonfigurasi. Masukkan kunci Anda melalui menu "⚙️ Pengaturan AI" atau di Environment Variables.');
     }
-  } else if (provider === 'custom' || provider === 'koboillm') {
-    const defaultUrl = provider === 'koboillm' ? 'https://api.koboillm.com/v1' : 'https://api.openai.com/v1';
+  } else if (provider === 'custom' || provider === 'koboillm' || provider === 'sumopod') {
+    const defaultUrl = provider === 'sumopod' 
+      ? 'https://ai.sumopod.com/v1' 
+      : (provider === 'koboillm' ? 'https://api.koboillm.com/v1' : 'https://api.openai.com/v1');
     const effectiveBase = baseUrlHeader || defaultUrl;
     endpoint = `${effectiveBase.replace(/\/$/, '')}/chat/completions`;
-    apiKey = apiKey || (provider === 'koboillm' ? (process.env.KOBOILLM_API_KEY || 'sk-wMaVBOWC1G69emLkQ5T9Ng') : '');
+    
+    if (provider === 'sumopod') {
+      apiKey = apiKey || process.env.SUMOPOD_API_KEY || process.env.OPENAI_API_KEY || 'sk-DFe4pA8Vmm2p4OIr01pwJw';
+    } else if (provider === 'koboillm') {
+      apiKey = apiKey || process.env.KOBOILLM_API_KEY || 'sk-wMaVBOWC1G69emLkQ5T9Ng';
+    }
     
     if (!model || model === 'auto') {
       // Auto fetch model if model is empty or 'auto'
@@ -219,7 +226,8 @@ export async function callUnifiedAI({
         console.warn('Auto fetch model failed in server:', e);
       }
     }
-    model = model || 'gemini/gemini-3.1-flash-lite';
+    const defaultFallbackModel = provider === 'sumopod' ? 'glm-5.3-flash' : 'gemini/gemini-3.1-flash-lite';
+    model = model || defaultFallbackModel;
     if (!apiKey) {
       throw new Error(`API Key untuk ${provider} belum diisi.`);
     }

@@ -55,7 +55,12 @@ export function FormInputCfit3({ state, setState }: FormInputCfit3Props) {
   const handleSelectPresetPsikolog = (profile: PsychologistProfile) => {
     setState(prev => ({
       ...(prev || INITIAL_CFIT3_STATE),
-      psikologPemeriksa: { ...profile }
+      psikologPemeriksa: {
+        nama: profile.nama,
+        sipp: profile.sipp,
+        siap: profile.siap || '',
+        kota: profile.kota || 'Probolinggo'
+      }
     }));
   };
 

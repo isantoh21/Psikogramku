@@ -5,18 +5,33 @@
     size: A4 portrait;
     margin: 0 !important;
   }
-  
-  html, body {
+
+  html,
+  body {
     margin: 0 !important;
     padding: 0 !important;
     width: 210mm !important;
+    height: 297mm !important;
     background-color: white !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
   .print\:hidden {
     display: none !important;
   }
 }
 
+/* Prevent page break inside laporan */
+.psikogram-page {
+  page-break-inside: avoid;
+  break-inside: avoid;
+  page-break-after: avoid;
+  break-after: avoid;
+}

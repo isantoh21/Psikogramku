@@ -1,8 +1,9 @@
-import React from 'react';
+
+import React, { useCallback, useRef, useState } from 'react';
 import { Cfit3AppState, INITIAL_CFIT3_STATE } from '../types';
 import { getIqClassification, formatDateId, calculateAge } from '../utils/scoring';
 import { LOGO_ANNUR_BASE64 } from '../assets/logoAnnur';
-import { FileText, Printer } from 'lucide-react';
+import { FileText, Printer, Download, Loader2 } from 'lucide-react';
 
 interface PreviewPsikogramCfit3Props {
   state?: Cfit3AppState;
@@ -16,6 +17,9 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
   const rmibInterests = safeState.rmibInterests || INITIAL_CFIT3_STATE.rmibInterests;
   const dreamJobs = safeState.dreamJobs || INITIAL_CFIT3_STATE.dreamJobs;
   const psikolog = safeState.psikologPemeriksa || INITIAL_CFIT3_STATE.psikologPemeriksa;
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isExportingImage, setIsExportingImage] = useState(false);
 
   const renderFormattedRecommendation = (rawText?: string) => {
     if (!rawText || !rawText.trim()) {
@@ -40,7 +44,7 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
           {itemChunks.map((chunk, idx) => {
             const trimmed = chunk.trim();
             const lines = trimmed.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-            
+
             let title = '';
             let content = '';
 
@@ -163,9 +167,71 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
     URL.revokeObjectURL(url);
   };
 
-  const handlePrint = () => {
+  const exportToPdf = useCallback(async () => {
+    const element = previewRef.current || document.getElementById('psikogram-preview-cfit3');
+    if (!element || isExportingPdf) return;
+    setIsExportingPdf(true);
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const jspdfModule = await import('jspdf');
+      const jsPDFConstructor = jspdfModule.jsPDF || (jspdfModule.default && (jspdfModule.default as any).jsPDF) || jspdfModule.default;
+
+      const canvas = await html2canvas(element, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/png', 1.0);
+      const pdf = new jsPDFConstructor({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true,
+      });
+
+      pdf.addImage(imgData, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
+      pdf.save(`Laporan_Panti_Clarak_${(clientData.nama || 'Klien').replace(/\s+/g, '_')}.pdf`);
+    } catch (err) {
+      console.error('PDF export failed:', err);
+      window.print();
+    } finally {
+      setIsExportingPdf(false);
+    }
+  }, [clientData.nama, isExportingPdf]);
+
+  const exportAsImage = useCallback(async () => {
+    const element = previewRef.current || document.getElementById('psikogram-preview-cfit3');
+    if (!element || isExportingImage) return;
+    setIsExportingImage(true);
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(element, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+
+      const link = document.createElement('a');
+      link.download = `Laporan_Panti_Clarak_${(clientData.nama || 'Klien').replace(/\s+/g, '_')}.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 0.95);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Image export failed:', err);
+    } finally {
+      setIsExportingImage(false);
+    }
+  }, [clientData.nama, isExportingImage]);
+
+  const handlePrint = useCallback(() => {
     window.print();
-  };
+  }, []);
 
   const getStar = (val: number, expected: number) => {
     return val === expected ? '✬' : '';
@@ -201,14 +267,30 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
           <span className="text-[11px] text-gray-500 font-medium hidden sm:inline">210 mm × 297 mm (1 Lembar)</span>
         </div>
         <div className="flex items-center gap-2">
-          <button 
+          <button
+            onClick={exportToPdf}
+            disabled={isExportingPdf}
+            className="flex items-center text-xs font-semibold text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg transition-colors shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isExportingPdf ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Download className="w-3.5 h-3.5 mr-1.5" />}
+            {isExportingPdf ? 'Menyimpan...' : 'Simpan PDF'}
+          </button>
+          <button
+            onClick={exportAsImage}
+            disabled={isExportingImage}
+            className="flex items-center text-xs font-semibold text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-lg transition-colors shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isExportingImage ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Download className="w-3.5 h-3.5 mr-1.5" />}
+            {isExportingImage ? 'Menyimpan...' : 'Simpan Gambar'}
+          </button>
+          <button
             onClick={handlePrint}
             className="flex items-center text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300 px-3 py-1.5 rounded-lg transition-colors shadow-xs"
           >
             <Printer className="w-3.5 h-3.5 mr-1.5" />
-            Cetak / Simpan PDF
+            Cetak
           </button>
-          <button 
+          <button
             onClick={exportToDocx}
             className="flex items-center text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-3.5 py-1.5 rounded-lg transition-colors shadow-xs"
           >
@@ -219,7 +301,8 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
       </div>
 
       {/* Main A4 Paper Sheet */}
-      <div 
+      <div
+        ref={previewRef}
         id="psikogram-preview-cfit3"
         className="w-[210mm] min-h-[297mm] max-h-[297mm] bg-white text-black font-serif text-[9.5px] leading-tight print:shadow-none print:m-0 print:border-none print:w-[210mm] print:min-h-[297mm] print:max-h-[297mm] print:overflow-hidden mx-auto"
         style={{
@@ -239,9 +322,9 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
           <tbody>
             <tr>
               <td style={{ width: '68px', verticalAlign: 'middle', border: 'none', padding: '0 6px 4px 0' }}>
-                <img 
-                  src={LOGO_ANNUR_BASE64} 
-                  alt="Logo AN-NUR Psycho Center" 
+                <img
+                  src={LOGO_ANNUR_BASE64}
+                  alt="Logo AN-NUR Psycho Center"
                   width="64"
                   height="64"
                   style={{ width: '64px', height: '64px', objectFit: 'contain', display: 'block' }}
@@ -315,15 +398,15 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
             <thead>
               <tr style={{ backgroundColor: '#f3f4f6' }}>
                 <th style={{ border: '1px solid black', padding: '2px', fontWeight: 'bold', textAlign: 'center', width: '20%' }} rowSpan={2}>
-                  PSIKOGRAM<br/>Taraf Kecerdasan (CFIT)
+                  PSIKOGRAM<br />Taraf Kecerdasan (CFIT)
                 </th>
-                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Sangat Rendah<br/>&lt; 70</th>
-                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Rendah<br/>70 - 79</th>
-                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Rata-rata Bawah<br/>80 - 89</th>
-                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Rata-rata<br/>90 - 109</th>
-                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Rata-rata Atas<br/>110 - 119</th>
-                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Tinggi<br/>120 - 129</th>
-                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Sangat Tinggi<br/>&ge; 130</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Sangat Rendah<br />&lt; 70</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Rendah<br />70 - 79</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Rata-rata Bawah<br />80 - 89</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Rata-rata<br />90 - 109</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Rata-rata Atas<br />110 - 119</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Tinggi<br />120 - 129</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Sangat Tinggi<br />&ge; 130</th>
               </tr>
               <tr style={{ height: '18px' }}>
                 <td style={{ border: '1px solid black', fontWeight: 'bold', fontSize: '12px' }}>{iqNum !== null && iqNum < 70 ? '✓' : ''}</td>
@@ -495,7 +578,7 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
                 <div style={{ fontSize: '7.5px', color: '#374151', marginTop: '1px' }}>
                   SIPP. {psikolog?.sipp || '20250059-2025-01-0567'}
                 </div>
-                {psikolog?.siap && (
+                {psikolog?.siap && !psikolog?.nama?.toLowerCase().includes('chozina') && (
                   <div style={{ fontSize: '7px', color: '#4b5563' }}>
                     No. SIAP: {psikolog.siap}
                   </div>

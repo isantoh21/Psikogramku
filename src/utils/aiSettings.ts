@@ -1,4 +1,4 @@
-export type AIProvider = 'koboillm' | 'custom' | 'gemini' | 'openai' | 'openrouter' | 'groq';
+export type AIProvider = 'koboillm' | 'sumopod' | 'custom' | 'gemini' | 'openai' | 'openrouter' | 'groq';
 
 export interface AISettings {
   provider: AIProvider;
@@ -21,6 +21,16 @@ export const PROVIDER_OPTIONS: {
   defaultContextLength?: number;
   supportsVision?: boolean;
 }[] = [
+  {
+    id: 'sumopod',
+    name: 'Sumopod AI (OpenAI Compatible)',
+    description: 'Endpoint Sumopod v1 (glm-5.3-flash, deepseek-v4.1-flash) siap pakai saat Gemini limit.',
+    defaultModel: 'glm-5.3-flash',
+    defaultBaseUrl: 'https://ai.sumopod.com/v1',
+    placeholderKey: 'sk-DFe4...',
+    defaultContextLength: 128000,
+    supportsVision: false
+  },
   {
     id: 'koboillm',
     name: 'KoboiLLM (Custom Provider)',

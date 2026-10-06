@@ -578,7 +578,6 @@ export const PRESET_PSYCHOLOGISTS: PsychologistProfile[] = [
   {
     nama: 'Chozina Nauvalia, M.Psi., Psikolog',
     sipp: '20230295-2024-01-5617',
-    siap: '20230295',
     kota: 'Probolinggo',
   },
 ];
