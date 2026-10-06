@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Cfit3AppState, ScaleLevel, INITIAL_CFIT3_STATE } from '../types';
+import { Cfit3AppState, ScaleLevel, INITIAL_CFIT3_STATE, PRESET_PSYCHOLOGISTS, PsychologistProfile } from '../types';
 import { 
   PREDEFINED_INTERESTS, 
   getScaleLabel, 
@@ -26,7 +26,8 @@ import {
   Zap, 
   Briefcase, 
   GraduationCap,
-  Info
+  Info,
+  UserCheck
 } from 'lucide-react';
 
 interface FormInputCfit3Props {
@@ -43,12 +44,34 @@ export function FormInputCfit3({ state, setState }: FormInputCfit3Props) {
   const bakatKemampuan = safeState.bakatKemampuan || INITIAL_CFIT3_STATE.bakatKemampuan;
   const rmibInterests = safeState.rmibInterests || INITIAL_CFIT3_STATE.rmibInterests;
   const dreamJobs = safeState.dreamJobs || INITIAL_CFIT3_STATE.dreamJobs;
+  const psikolog = safeState.psikologPemeriksa || INITIAL_CFIT3_STATE.psikologPemeriksa || PRESET_PSYCHOLOGISTS[0];
 
   const [inputMode, setInputMode] = useState<'quick' | 'answers'>('quick');
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+
+  const handleSelectPresetPsikolog = (profile: PsychologistProfile) => {
+    setState(prev => ({
+      ...(prev || INITIAL_CFIT3_STATE),
+      psikologPemeriksa: { ...profile }
+    }));
+  };
+
+  const handlePsikologChange = (field: keyof PsychologistProfile, value: string) => {
+    setState(prev => {
+      const base = prev || INITIAL_CFIT3_STATE;
+      const current = base.psikologPemeriksa || INITIAL_CFIT3_STATE.psikologPemeriksa || PRESET_PSYCHOLOGISTS[0];
+      return {
+        ...base,
+        psikologPemeriksa: {
+          ...current,
+          [field]: value
+        }
+      };
+    });
+  };
 
   const ageYears = getAgeInYears(clientData.tanggalLahir, clientData.tanggalTes);
   const ageDisplay = calculateAge(clientData.tanggalLahir, clientData.tanggalTes);
@@ -448,7 +471,7 @@ ATURAN FORMAT PENULISAN:
             />
           </div>
 
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-1">
             <label className="block font-medium text-gray-700 mb-1">Nomor Laporan (Opsional)</label>
             <input
               type="text"
@@ -457,6 +480,31 @@ ATURAN FORMAT PENULISAN:
               placeholder="Contoh: 042/PSI-APC/X/2026"
               className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm"
             />
+          </div>
+
+          <div className="sm:col-span-1">
+            <label className="block font-medium text-gray-700 mb-1">Psikolog Pemeriksa</label>
+            <div className="flex gap-2">
+              {PRESET_PSYCHOLOGISTS.map((item, idx) => {
+                const isSelected = (psikolog?.nama || '').trim().toLowerCase() === item.nama.trim().toLowerCase();
+                const shortName = item.nama.includes('Chozina') ? 'Chozina' : 'Ikhsan';
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSelectPresetPsikolog(item)}
+                    className={`flex-1 px-2.5 py-2 rounded-lg border text-left text-xs transition-all flex items-center justify-between ${
+                      isSelected
+                        ? 'bg-indigo-50 border-indigo-400 text-indigo-900 font-bold shadow-xs ring-1 ring-indigo-400'
+                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="truncate">{shortName}</span>
+                    {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -940,6 +988,124 @@ ATURAN FORMAT PENULISAN:
           <div className="flex justify-between items-center text-[11px] text-gray-500 mt-1">
             <span>Rekomendasi ini dapat diedit bebas dan akan tampil di lembar laporan hasil pemeriksaan psikologis.</span>
             <span>{safeState.rekomendasi.length} karakter</span>
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION 6: PSIKOLOG PEMERIKSA (TANDA TANGAN LAPORAN) */}
+      <div className="space-y-4 bg-white p-4 rounded-xl border border-indigo-200 shadow-sm">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-2 border-b border-gray-100">
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-900 flex items-center gap-2">
+              <UserCheck className="w-4 h-4 text-indigo-600" />
+              6. Psikolog Pemeriksa (Tanda Tangan Laporan)
+            </h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Pilih psikolog yang menandatangani lembar laporan hasil pemeriksaan psikologis
+            </p>
+          </div>
+          <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            Aktif: {psikolog?.nama?.split(',')[0] || 'Psikolog'}
+          </span>
+        </div>
+
+        {/* Preset Cards Selection */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {PRESET_PSYCHOLOGISTS.map((item, idx) => {
+            const isSelected = (psikolog?.nama || '').trim().toLowerCase() === item.nama.trim().toLowerCase();
+            return (
+              <div
+                key={idx}
+                onClick={() => handleSelectPresetPsikolog(item)}
+                className={`cursor-pointer rounded-xl p-3.5 border transition-all relative ${
+                  isSelected
+                    ? 'bg-indigo-50/80 border-indigo-500 shadow-sm ring-2 ring-indigo-500/20'
+                    : 'bg-gray-50/70 border-gray-200 hover:bg-gray-100/80 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs ${
+                      isSelected ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-200 text-gray-700'
+                    }`}>
+                      {item.nama.charAt(0)}
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-900 leading-snug">{item.nama}</h4>
+                      <p className="text-[10px] text-gray-500 mt-0.5">
+                        {item.nama.includes('Chozina') ? 'Psikolog Universitas Airlangga' : 'Psikolog AN-NUR Psycho Center'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center">
+                    <span className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
+                      isSelected ? 'border-indigo-600 bg-indigo-600 text-white shadow-sm' : 'border-gray-300 bg-white'
+                    }`}>
+                      {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-3 pt-2.5 border-t border-gray-200/60 grid grid-cols-2 gap-2 text-[10px]">
+                  <div>
+                    <span className="text-gray-500 block">No. SIPP / SILP:</span>
+                    <span className="font-semibold text-gray-900 font-mono text-[9.5px]">{item.sipp}</span>
+                  </div>
+                  {item.siap ? (
+                    <div>
+                      <span className="text-gray-500 block">No. SIAP:</span>
+                      <span className="font-semibold text-gray-900 font-mono text-[9.5px]">{item.siap}</span>
+                    </div>
+                  ) : (
+                    <div>
+                      <span className="text-gray-500 block">Kota:</span>
+                      <span className="font-semibold text-gray-900">{item.kota || 'Probolinggo'}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Editable Detail Fields */}
+        <div className="pt-2 border-t border-gray-100">
+          <div className="text-[11px] font-semibold text-gray-600 mb-2 flex items-center gap-1.5">
+            <Edit3 className="w-3.5 h-3.5 text-gray-500" />
+            Edit Identitas / Kustomisasi Penandatangan:
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+            <div className="sm:col-span-2">
+              <label className="block text-[11px] font-medium text-gray-600 mb-1">Nama Lengkap & Gelar</label>
+              <input
+                type="text"
+                value={psikolog?.nama || ''}
+                onChange={e => handlePsikologChange('nama', e.target.value)}
+                className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-1 focus:ring-indigo-500 text-xs font-semibold"
+                placeholder="cth. Chozina Nauvalia, M.Psi., Psikolog"
+              />
+            </div>
+            <div className="sm:col-span-1">
+              <label className="block text-[11px] font-medium text-gray-600 mb-1">No. SIPP / SILP</label>
+              <input
+                type="text"
+                value={psikolog?.sipp || ''}
+                onChange={e => handlePsikologChange('sipp', e.target.value)}
+                className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-1 focus:ring-indigo-500 text-xs font-mono"
+                placeholder="cth. 20230295-2024-01-5617"
+              />
+            </div>
+            <div className="sm:col-span-1">
+              <label className="block text-[11px] font-medium text-gray-600 mb-1">No. SIAP (Opsional)</label>
+              <input
+                type="text"
+                value={psikolog?.siap || ''}
+                onChange={e => handlePsikologChange('siap', e.target.value)}
+                className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-1 focus:ring-indigo-500 text-xs font-mono"
+                placeholder="cth. 20230295"
+              />
+            </div>
           </div>
         </div>
       </div>

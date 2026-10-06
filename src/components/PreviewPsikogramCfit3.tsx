@@ -15,6 +15,7 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
   const bakatKemampuan = safeState.bakatKemampuan || INITIAL_CFIT3_STATE.bakatKemampuan;
   const rmibInterests = safeState.rmibInterests || INITIAL_CFIT3_STATE.rmibInterests;
   const dreamJobs = safeState.dreamJobs || INITIAL_CFIT3_STATE.dreamJobs;
+  const psikolog = safeState.psikologPemeriksa || INITIAL_CFIT3_STATE.psikologPemeriksa;
 
   const exportToDocx = () => {
     const element = document.getElementById('psikogram-preview-cfit3');
@@ -145,7 +146,7 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
               <div>
                 <h1 className="text-base font-bold uppercase tracking-wide leading-tight">AN-NUR PSYCHO CENTER</h1>
                 <p className="text-[9.5px] leading-tight text-gray-800">Layanan Konsultasi, Edukasi, dan Tes Psikologi Kota Probolinggo</p>
-                <p className="text-[8.5px] leading-tight text-gray-700">Jl. Hayam Wuruk II/2, Kec. Mayangan, Kota Probolinggo | SIPP: 20250059-2025-01-0567</p>
+                <p className="text-[8.5px] leading-tight text-gray-700">Jl. Hayam Wuruk II/2, Kec. Mayangan, Kota Probolinggo | SIPP: {psikolog?.sipp || '20250059-2025-01-0567'}</p>
                 <p className="text-[8px] leading-tight text-gray-600">Email: annurpsychocenter@gmail.com | IG: @annurpsychocenter</p>
               </div>
             </div>
@@ -356,15 +357,18 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
           {/* 5. Tanda Tangan Psikolog */}
           <div className="flex justify-end mt-1 mr-4 text-center text-[9.5px]">
             <div>
-              <p className="mb-0.5">Probolinggo, {testDateFormatted || currentDateFormatted}</p>
+              <p className="mb-0.5">{psikolog?.kota || 'Probolinggo'}, {testDateFormatted || currentDateFormatted}</p>
               <p className="mb-10 font-medium">Psikolog Pemeriksa,</p>
               
               <div className="flex justify-center items-center relative mb-0.5">
                 <p className="font-bold border-b border-black inline-block z-10 relative bg-white px-1">
-                  Muhammad Ikhsan, M.Psi., Psikolog
+                  {psikolog?.nama || 'Muhammad Ikhsan, M.Psi., Psikolog'}
                 </p>
               </div>
-              <p className="text-[8.5px] text-gray-700">SIPP. 20250059-2025-01-0567</p>
+              <p className="text-[8.5px] text-gray-700">SIPP. {psikolog?.sipp || '20250059-2025-01-0567'}</p>
+              {psikolog?.siap && (
+                <p className="text-[8px] text-gray-600">No. SIAP: {psikolog.siap}</p>
+              )}
             </div>
           </div>
         </div>

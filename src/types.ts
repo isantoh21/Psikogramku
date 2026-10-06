@@ -562,6 +562,27 @@ export interface Cfit3BakatKemampuan {
   ketajamanDiferensiasi: ScaleLevel;
 }
 
+export interface PsychologistProfile {
+  nama: string;
+  sipp: string;
+  siap?: string;
+  kota?: string;
+}
+
+export const PRESET_PSYCHOLOGISTS: PsychologistProfile[] = [
+  {
+    nama: 'Muhammad Ikhsan, M.Psi., Psikolog',
+    sipp: '20250059-2025-01-0567',
+    kota: 'Probolinggo',
+  },
+  {
+    nama: 'Chozina Nauvalia, M.Psi., Psikolog',
+    sipp: '20230295-2024-01-5617',
+    siap: '20230295',
+    kota: 'Probolinggo',
+  },
+];
+
 export interface Cfit3AppState {
   clientData: Cfit3ClientData;
   iqScore: number | '';
@@ -574,6 +595,7 @@ export interface Cfit3AppState {
   rmibInterests: Interest[];
   dreamJobs: string[];
   rekomendasi: string;
+  psikologPemeriksa?: PsychologistProfile;
 }
 
 export const INITIAL_CFIT3_STATE: Cfit3AppState = {
@@ -620,4 +642,9 @@ export const INITIAL_CFIT3_STATE: Cfit3AppState = {
   ],
   dreamJobs: ['', '', ''],
   rekomendasi: '',
+  psikologPemeriksa: {
+    nama: 'Muhammad Ikhsan, M.Psi., Psikolog',
+    sipp: '20250059-2025-01-0567',
+    kota: 'Probolinggo',
+  },
 };
