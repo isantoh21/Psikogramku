@@ -359,19 +359,19 @@ export default function App() {
   if (!isLoaded) return null;
 
   return (
-    <div className="flex h-screen bg-gray-100 text-gray-900 font-sans print:bg-white overflow-hidden">
+    <div className="flex h-screen bg-gray-100 text-gray-900 font-sans print:bg-white overflow-hidden print:overflow-visible print:h-auto print:block">
       
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden print:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
       {/* Admin Panel Sidebar */}
       <div className={`
-        fixed lg:static inset-y-0 left-0 z-50 flex-shrink-0 bg-gray-900 text-white transition-all duration-300 ease-in-out
+        fixed lg:static inset-y-0 left-0 z-50 flex-shrink-0 bg-gray-900 text-white transition-all duration-300 ease-in-out print:hidden
         ${isSidebarOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full lg:w-0 lg:translate-x-0 overflow-hidden'}
       `}>
         <div className="w-72 h-full flex flex-col">
@@ -472,7 +472,7 @@ export default function App() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col h-full min-w-0">
+      <div className="flex-1 flex flex-col h-full min-w-0 print:block print:h-auto print:overflow-visible">
         
         {/* Header - Hidden on print */}
         <header className="bg-indigo-700 text-white shadow-md print:hidden flex-none z-10">
@@ -507,7 +507,7 @@ export default function App() {
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 print:p-0 print:m-0 overflow-hidden">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 print:p-0 print:m-0 overflow-hidden print:overflow-visible print:h-auto print:block">
           {activeApp === 'markitdown' ? (
             <div className="h-full overflow-y-auto custom-scrollbar">
               <MarkItDown />
@@ -517,7 +517,7 @@ export default function App() {
               <HasilBEI />
             </div>
           ) : (
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 print:block h-full">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 print:block h-full print:h-auto">
               
               {/* Left Column: Form Input (Hidden on print) */}
               <div className="xl:col-span-5 2xl:col-span-4 print:hidden h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">

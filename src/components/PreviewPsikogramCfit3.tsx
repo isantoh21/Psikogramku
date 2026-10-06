@@ -1,11 +1,50 @@
-
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Cfit3AppState, INITIAL_CFIT3_STATE } from '../types';
 import { getIqClassification, formatDateId, calculateAge } from '../utils/scoring';
 import { LOGO_ANNUR_BASE64 } from '../assets/logoAnnur';
 import { TTD_CHOZINA_BASE64, TTD_IKHSAN_BASE64 } from '../assets/tandaTangan';
 import { STEMPEL_ANNUR_BASE64 } from '../assets/stempel';
 import { FileText, Printer, Download, Loader2 } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+
+// Helper membuat background stempel transparan alami tanpa mix-blend-mode (anti-crash html2canvas)
+const makeImageTransparent = (base64Src: string): Promise<string> => {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined') return resolve(base64Src);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(base64Src);
+        ctx.drawImage(img, 0, 0);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
+          if (brightness > 205) {
+            data[i + 3] = 0;
+          } else if (brightness > 170) {
+            data[i + 3] = Math.round(255 * (1 - (brightness - 170) / 35));
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      } catch {
+        resolve(base64Src);
+      }
+    };
+    img.onerror = () => resolve(base64Src);
+    img.src = base64Src;
+  });
+};
 
 interface PreviewPsikogramCfit3Props {
   state?: Cfit3AppState;
@@ -24,6 +63,13 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
   const previewRef = useRef<HTMLDivElement>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isExportingImage, setIsExportingImage] = useState(false);
+  const [stempelSrc, setStempelSrc] = useState<string>(STEMPEL_ANNUR_BASE64);
+
+  useEffect(() => {
+    makeImageTransparent(STEMPEL_ANNUR_BASE64).then((res) => {
+      setStempelSrc(res);
+    });
+  }, []);
 
   const renderFormattedRecommendation = (rawText?: string) => {
     if (!rawText || !rawText.trim()) {
@@ -177,32 +223,37 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
     if (!element || isExportingPdf) return;
     setIsExportingPdf(true);
     try {
-      const html2canvas = (await import('html2canvas')).default;
-      const jspdfModule = await import('jspdf');
-      const jsPDFConstructor = jspdfModule.jsPDF || (jspdfModule.default && (jspdfModule.default as any).jsPDF) || jspdfModule.default;
+      const cleanName = (clientData.nama || 'Anak').trim().replace(/[/\\?%*:|"<>]/g, '');
 
       const canvas = await html2canvas(element, {
-        scale: 3,
+        scale: 2.5,
         useCORS: true,
         allowTaint: true,
         logging: false,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        windowWidth: 1200,
+        onclone: (clonedDoc) => {
+          const el = clonedDoc.getElementById('psikogram-preview-cfit3');
+          if (el) {
+            el.style.transform = 'none';
+            el.style.margin = '0 auto';
+          }
+        }
       });
 
       const imgData = canvas.toDataURL('image/png', 1.0);
-      const pdf = new jsPDFConstructor({
+      const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4',
         compress: true,
       });
 
-      const cleanName = (clientData.nama || 'Anak').trim().replace(/[/\\?%*:|"<>]/g, '');
       pdf.addImage(imgData, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
       pdf.save(`${cleanName}_Hasil Tes Bakat Minat.pdf`);
     } catch (err) {
       console.error('PDF export failed:', err);
-      window.print();
+      alert('Gagal membuat file PDF. Silakan gunakan tombol "Cetak" dan pilih printer "Save as PDF / Simpan sebagai PDF".');
     } finally {
       setIsExportingPdf(false);
     }
@@ -213,13 +264,20 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
     if (!element || isExportingImage) return;
     setIsExportingImage(true);
     try {
-      const html2canvas = (await import('html2canvas')).default;
       const canvas = await html2canvas(element, {
-        scale: 3,
+        scale: 2.5,
         useCORS: true,
         allowTaint: true,
         logging: false,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        windowWidth: 1200,
+        onclone: (clonedDoc) => {
+          const el = clonedDoc.getElementById('psikogram-preview-cfit3');
+          if (el) {
+            el.style.transform = 'none';
+            el.style.margin = '0 auto';
+          }
+        }
       });
 
       const cleanName = (clientData.nama || 'Anak').trim().replace(/[/\\?%*:|"<>]/g, '');
@@ -231,6 +289,7 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
       document.body.removeChild(link);
     } catch (err) {
       console.error('Image export failed:', err);
+      alert('Gagal menyimpan gambar laporan.');
     } finally {
       setIsExportingImage(false);
     }
@@ -587,7 +646,7 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
                   <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                     {/* Stempel AN-NUR (Cap Resmi menimpa sisi kiri tanda tangan secara presisi & tajam) */}
                     <img
-                      src={STEMPEL_ANNUR_BASE64}
+                      src={stempelSrc}
                       alt="Stempel AN-NUR Psycho Center"
                       style={{
                         position: 'absolute',
@@ -596,8 +655,6 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
                         width: '64px',
                         height: '64px',
                         objectFit: 'contain',
-                        mixBlendMode: 'multiply',
-                        filter: 'contrast(1.4) saturate(1.15)',
                         pointerEvents: 'none',
                         zIndex: 1
                       }}
