@@ -13,6 +13,7 @@ import {
 } from '../utils/scoring';
 import { callDirectAI, callDirectTextAI } from '../utils/clientAIExtractor';
 import { getAISettings } from '../utils/aiSettings';
+import { TTD_CHOZINA_BASE64, TTD_IKHSAN_BASE64 } from '../assets/tandaTangan';
 import { 
   Bot, 
   Loader2, 
@@ -1065,22 +1066,22 @@ ATURAN FORMAT PENULISAN (SANGAT PENTING):
                   </div>
                 </div>
 
-                <div className="mt-3 pt-2.5 border-t border-gray-200/60 grid grid-cols-2 gap-2 text-[10px]">
+                <div className="mt-3 pt-2.5 border-t border-gray-200/60 flex items-center justify-between text-[10px]">
                   <div>
                     <span className="text-gray-500 block">No. SIPP / SILP:</span>
                     <span className="font-semibold text-gray-900 font-mono text-[9.5px]">{item.sipp}</span>
+                    <span className="text-gray-400 block text-[9px] mt-0.5">{item.kota || 'Probolinggo'}</span>
                   </div>
-                  {item.siap ? (
-                    <div>
-                      <span className="text-gray-500 block">No. SIAP:</span>
-                      <span className="font-semibold text-gray-900 font-mono text-[9.5px]">{item.siap}</span>
+                  <div className="flex flex-col items-end">
+                    <span className="text-gray-400 text-[8.5px] mb-0.5">Tanda Tangan Tersemat:</span>
+                    <div className="h-6 w-16 bg-white rounded border border-gray-200 flex items-center justify-center p-0.5 shadow-2xs">
+                      <img
+                        src={item.nama.includes('Chozina') ? TTD_CHOZINA_BASE64 : TTD_IKHSAN_BASE64}
+                        alt="Tanda Tangan"
+                        className="max-h-full max-w-full object-contain"
+                      />
                     </div>
-                  ) : (
-                    <div>
-                      <span className="text-gray-500 block">Kota:</span>
-                      <span className="font-semibold text-gray-900">{item.kota || 'Probolinggo'}</span>
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
             );

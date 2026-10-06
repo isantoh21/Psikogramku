@@ -3,6 +3,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import { Cfit3AppState, INITIAL_CFIT3_STATE } from '../types';
 import { getIqClassification, formatDateId, calculateAge } from '../utils/scoring';
 import { LOGO_ANNUR_BASE64 } from '../assets/logoAnnur';
+import { TTD_CHOZINA_BASE64, TTD_IKHSAN_BASE64 } from '../assets/tandaTangan';
 import { FileText, Printer, Download, Loader2 } from 'lucide-react';
 
 interface PreviewPsikogramCfit3Props {
@@ -17,6 +18,8 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
   const rmibInterests = safeState.rmibInterests || INITIAL_CFIT3_STATE.rmibInterests;
   const dreamJobs = safeState.dreamJobs || INITIAL_CFIT3_STATE.dreamJobs;
   const psikolog = safeState.psikologPemeriksa || INITIAL_CFIT3_STATE.psikologPemeriksa;
+  const isChozina = (psikolog?.nama || '').toLowerCase().includes('chozina');
+  const signatureBase64 = isChozina ? TTD_CHOZINA_BASE64 : TTD_IKHSAN_BASE64;
   const previewRef = useRef<HTMLDivElement>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isExportingImage, setIsExportingImage] = useState(false);
@@ -569,7 +572,19 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
               <td style={{ width: '58%', border: 'none' }}></td>
               <td style={{ width: '42%', border: 'none', textAlign: 'center', fontSize: '8.5px', lineHeight: '1.15' }}>
                 <div>{psikolog?.kota || 'Probolinggo'}, {testDateFormatted || currentDateFormatted}</div>
-                <div style={{ fontWeight: 500, marginBottom: '32px' }}>Psikolog Pemeriksa,</div>
+                <div style={{ fontWeight: 500, marginBottom: '2px' }}>Psikolog Pemeriksa,</div>
+                <div style={{ height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '1px 0' }}>
+                  <img
+                    src={signatureBase64}
+                    alt={isChozina ? "Tanda Tangan Chozina" : "Tanda Tangan Muhammad Ikhsan"}
+                    style={{
+                      maxHeight: '40px',
+                      maxWidth: '120px',
+                      objectFit: 'contain',
+                      display: 'inline-block'
+                    }}
+                  />
+                </div>
                 <div>
                   <span style={{ fontWeight: 'bold', borderBottom: '1px solid black', display: 'inline-block', padding: '0 4px' }}>
                     {psikolog?.nama || 'Muhammad Ikhsan, M.Psi., Psikolog'}
@@ -578,7 +593,7 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
                 <div style={{ fontSize: '7.5px', color: '#374151', marginTop: '1px' }}>
                   SIPP. {psikolog?.sipp || '20250059-2025-01-0567'}
                 </div>
-                {psikolog?.siap && !psikolog?.nama?.toLowerCase().includes('chozina') && (
+                {psikolog?.siap && !isChozina && (
                   <div style={{ fontSize: '7px', color: '#4b5563' }}>
                     No. SIAP: {psikolog.siap}
                   </div>
