@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Cfit3AppState, INITIAL_CFIT3_STATE } from '../types';
-import { getIqClassification, formatDateId, calculateAge } from '../utils/scoring';
+import { formatDateId, calculateAge } from '../utils/scoring';
 import { LOGO_ANNUR_BASE64 } from '../assets/logoAnnur';
 import { TTD_CHOZINA_BASE64, TTD_IKHSAN_BASE64 } from '../assets/tandaTangan';
 import { STEMPEL_ANNUR_BASE64 } from '../assets/stempel';
@@ -494,18 +494,7 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
               </tr>
             </thead>
           </table>
-          <table style={{ width: '100%', border: 'none', borderCollapse: 'collapse', fontSize: '8px', marginTop: '1px', fontStyle: 'italic', color: '#374151' }}>
-            <tbody>
-              <tr>
-                <td style={{ border: 'none', padding: '0', textAlign: 'left' }}>
-                  * Skor IQ CFIT Skala 3: <strong style={{ fontStyle: 'normal' }}>{safeState.iqScore !== '' ? safeState.iqScore : '-'}</strong> ({safeState.iqLabel || getIqClassification(safeState.iqScore)})
-                </td>
-                <td style={{ border: 'none', padding: '0', textAlign: 'right' }}>
-                  Raw Score: {safeState.rawScoreTotal !== '' ? safeState.rawScoreTotal : '-'} / 50
-                </td>
-              </tr>
-            </tbody>
-          </table>
+
         </div>
 
         {/* 2. Tabel Aspek Psikologis CFIT Skala 3 */}
