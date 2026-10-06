@@ -17,6 +17,75 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
   const dreamJobs = safeState.dreamJobs || INITIAL_CFIT3_STATE.dreamJobs;
   const psikolog = safeState.psikologPemeriksa || INITIAL_CFIT3_STATE.psikologPemeriksa;
 
+  const renderFormattedRecommendation = (rawText?: string) => {
+    if (!rawText || !rawText.trim()) {
+      return (
+        <span className="italic text-gray-500">
+          Rekomendasi tindak lanjut belum diisi. Gunakan tombol &quot;Generate Rekomendasi AI&quot; di form input atau tulis rekomendasi di formulir.
+        </span>
+      );
+    }
+
+    // 1. Bersihkan judul pembuka yang redundan di paling atas (seperti "Rekomendasi Tindak Lanjut Psikologis")
+    let cleaned = rawText.trim();
+    cleaned = cleaned.replace(/^(\*{0,2})rekomendasi\s+tindak\s+lanjut(\s+psikologis)?(\*{0,2})[:\s\n\r]*/i, '').trim();
+    cleaned = cleaned.replace(/^(\*{0,2})rekomendasi\s+psikologis(\*{0,2})[:\s\n\r]*/i, '').trim();
+
+    // 2. Pisahkan blok per nomor poin: 1., 2., 3., dst.
+    const itemChunks = cleaned.split(/(?:^|\n)(?=\s*\d+[\.\)])/g).filter(c => c.trim().length > 0);
+
+    if (itemChunks.length > 0 && itemChunks.some(c => /^\s*\d+[\.\)]/.test(c))) {
+      return (
+        <div className="space-y-1.5">
+          {itemChunks.map((chunk, idx) => {
+            const trimmed = chunk.trim();
+            const lines = trimmed.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            
+            let title = '';
+            let content = '';
+
+            if (lines.length >= 2 && /^\d+[\.\)]/.test(lines[0])) {
+              title = lines[0];
+              content = lines.slice(1).join('\n');
+            } else {
+              const colonMatch = trimmed.match(/^(\d+[\.\)][^:\n]+:)\s*([\s\S]+)$/);
+              if (colonMatch) {
+                title = colonMatch[1].trim();
+                content = colonMatch[2].trim();
+              } else {
+                const numMatch = trimmed.match(/^(\d+[\.\)][^\n]+)/);
+                title = numMatch ? numMatch[1] : trimmed;
+                content = trimmed.substring(title.length).trim();
+              }
+            }
+
+            title = title.replace(/\*\*/g, '').trim();
+            content = content.replace(/\*\*/g, '').trim();
+
+            return (
+              <div key={idx} className="text-[9px] leading-relaxed">
+                <p className="font-bold text-gray-900 leading-snug mb-0.5">
+                  <b>{title}</b>
+                </p>
+                {content && (
+                  <p className="font-normal text-gray-800 text-justify leading-relaxed whitespace-pre-line">
+                    {content}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    return (
+      <div className="text-[9px] font-normal leading-relaxed text-justify whitespace-pre-wrap">
+        {cleaned}
+      </div>
+    );
+  };
+
   const exportToDocx = () => {
     const element = document.getElementById('psikogram-preview-cfit3');
     if (!element) return;
@@ -346,8 +415,8 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-black p-2 align-top text-[9px] leading-relaxed whitespace-pre-wrap text-justify">
-                    {safeState.rekomendasi || 'Rekomendasi tindak lanjut belum diisi. Gunakan tombol "Generate Rekomendasi AI" di form input atau tulis rekomendasi di formulir.'}
+                  <td className="border border-black p-2 align-top text-[9px] leading-relaxed text-justify">
+                    {renderFormattedRecommendation(safeState.rekomendasi)}
                   </td>
                 </tr>
               </tbody>

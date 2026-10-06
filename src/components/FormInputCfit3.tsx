@@ -267,6 +267,10 @@ export function FormInputCfit3({ state, setState }: FormInputCfit3Props) {
     cleaned = cleaned.replace(/`([^`]+)`/g, '$1');      // backticks
     cleaned = cleaned.replace(/^\s*[\*\•]\s*/gm, '- '); // bullet points
 
+    // Strip redundant leading headers like "Rekomendasi Tindak Lanjut Psikologis"
+    cleaned = cleaned.replace(/^(\*{0,2})rekomendasi\s+tindak\s+lanjut(\s+psikologis)?(\*{0,2})[:\s\n\r]*/i, '');
+    cleaned = cleaned.replace(/^(\*{0,2})rekomendasi\s+psikologis(\*{0,2})[:\s\n\r]*/i, '');
+
     return cleaned.trim();
   };
 
@@ -315,10 +319,19 @@ ${isSmp ? `KARENA KLIEN BERADA DI USIA / JENJANG SMP, SUSUN PERSIS DALAM 3 POIN 
 2. Rekomendasi Program Studi / Bidang Profesi: Sebutkan program studi kuliah (S1/D4) atau bidang karir spesifik yang paling relevan dengan potensi kognitif dan 3 pekerjaan impian klien.
 3. Usaha & Persiapan Konkret: Rincikan apa saja langkah nyata yang harus diusahakan mulai sekarang (penguasaan keahlian praktis, portofolio, sertifikasi, penguasaan bahasa asing, logika matematika, serta pembiasaan kerja mandiri) guna mewujudkan cita-cita tersebut.`}
 
-ATURAN FORMAT PENULISAN:
-1. Tuliskan HANYA narasi rekomendasi psikologis resmi dalam Bahasa Indonesia yang mengalir, lugas, santun, dan profesional.
-2. JANGAN gunakan tanda bintang tebal (**), tanda pagar (###), atau format JSON apa pun. Gunakan penomoran biasa 1., 2., 3.
-3. Buat sekitar 150 - 200 kata agar padat, proporsional, dan pas dimuat di lembar laporan psikogram 1 lembar A4.`;
+ATURAN FORMAT PENULISAN (SANGAT PENTING):
+1. JANGAN PERNAH tulis judul pembuka (seperti "Rekomendasi Tindak Lanjut Psikologis" atau kalimat intro). LANGSUNG mulai dari baris "1. Rekomendasi...".
+2. Format penomoran:
+1. [Judul Poin 1]
+[Paragraf isi penjelasan]
+
+2. [Judul Poin 2]
+[Paragraf isi penjelasan]
+
+3. [Judul Poin 3]
+[Paragraf isi penjelasan]
+3. JANGAN gunakan tanda bintang tebal (**), tanda pagar (###), atau format JSON.
+4. Buat sekitar 150 - 200 kata agar padat, proporsional, dan pas dimuat di lembar laporan psikogram 1 lembar A4.`;
   };
 
   const handleGenerateAI = async () => {
@@ -330,7 +343,7 @@ ATURAN FORMAT PENULISAN:
       try {
         rawText = await callDirectTextAI({
           prompt: prompt,
-          systemInstruction: 'Anda adalah seorang Psikolog Pendidikan dan Karir profesional. Berikan rekomendasi narasi Bahasa Indonesia yang rapi, padat, terstruktur, tanpa simbol markdown tebal (**) dan tanpa format JSON.'
+          systemInstruction: 'Anda adalah seorang Psikolog Pendidikan dan Karir profesional. Berikan rekomendasi narasi Bahasa Indonesia yang rapi, padat, langsung mulai dari nomor 1 tanpa judul pembuka apa pun, tanpa simbol markdown tebal (**), dan tanpa format JSON.'
         });
       } catch (err: any) {
         console.warn('callDirectTextAI fallback to callDirectAI:', err);
