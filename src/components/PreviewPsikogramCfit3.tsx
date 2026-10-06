@@ -89,39 +89,68 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
   const exportToDocx = () => {
     const element = document.getElementById('psikogram-preview-cfit3');
     if (!element) return;
-    const header = `
+
+    const contentHtml = element.innerHTML;
+
+    const fullDocHtml = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office'
             xmlns:w='urn:schemas-microsoft-com:office:word'
             xmlns='http://www.w3.org/TR/REC-html40'>
       <head>
         <meta charset='utf-8'>
-        <title>Psikogram CFIT Skala 3</title>
+        <title>Laporan Hasil Pemeriksaan Psikologis - ${(clientData.nama || 'Klien')}</title>
+        <!--[if gte mso 9]>
+        <xml>
+          <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+            <w:DoNotOptimizeForBrowser/>
+          </w:WordDocument>
+        </xml>
+        <![endif]-->
         <style>
           @page {
-            size: A4 portrait;
-            margin: 12mm 15mm;
+            size: 210mm 297mm;
+            margin: 9mm 12mm 9mm 12mm;
+            mso-page-orientation: portrait;
+            mso-header-margin: 0mm;
+            mso-footer-margin: 0mm;
           }
           body {
-            font-family: 'Times New Roman', serif;
-            font-size: 9.5pt;
-            line-height: 1.25;
-            color: black;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 9pt;
+            line-height: 1.15;
+            color: #000000;
+            background-color: #ffffff;
+            margin: 0;
+            padding: 0;
           }
           table {
             border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
             width: 100%;
           }
-          th, td {
-            border: 1px solid black;
-            padding: 3px 5px;
+          td, th {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 9pt;
+            line-height: 1.15;
+            mso-line-height-rule: exactly;
+          }
+          b, strong {
+            font-weight: bold;
           }
         </style>
       </head>
       <body>
+        <div style="width: 100%; max-width: 186mm; margin: 0 auto;">
+          ${contentHtml}
+        </div>
+      </body>
+      </html>
     `;
-    const footer = "</body></html>";
-    const html = header + element.innerHTML + footer;
-    const blob = new Blob(['\ufeff', html], {
+
+    const blob = new Blob(['\ufeff', fullDocHtml], {
       type: 'application/msword'
     });
     const url = URL.createObjectURL(blob);
@@ -143,19 +172,19 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
   };
 
   const renderAspectRow = (no: string, title: string, desc: string, val: number) => (
-    <tr key={title} className="text-[10px] leading-tight">
-      <td className="border border-black px-1.5 py-0.5 text-center align-top font-medium w-[4%]">{no}</td>
-      <td className="border border-black px-2 py-0.5">
-        <span className="font-bold text-gray-900">{title}</span>
-        <span className="text-gray-700 block text-[9.5px] leading-snug">{desc}</span>
+    <tr key={title} style={{ fontSize: '9px', lineHeight: '1.15' }}>
+      <td style={{ border: '1px solid black', padding: '1.5px', textAlign: 'center', verticalAlign: 'top', fontWeight: 500, width: '4%' }}>{no}</td>
+      <td style={{ border: '1px solid black', padding: '1.5px 4px' }}>
+        <span style={{ fontWeight: 'bold', color: '#111827' }}>{title}</span>
+        <span style={{ color: '#374151', display: 'block', fontSize: '8.5px', lineHeight: '1.15' }}>{desc}</span>
       </td>
-      <td className="border border-black px-1 py-0.5 text-center font-bold text-xs w-[6.5%]">{getStar(val, 1)}</td>
-      <td className="border border-black px-1 py-0.5 text-center font-bold text-xs w-[6.5%]">{getStar(val, 2)}</td>
-      <td className="border border-black px-1 py-0.5 text-center font-bold text-xs w-[6.5%]">{getStar(val, 3)}</td>
-      <td className="border border-black px-1 py-0.5 text-center font-bold text-xs w-[6.5%]">{getStar(val, 4)}</td>
-      <td className="border border-black px-1 py-0.5 text-center font-bold text-xs w-[6.5%]">{getStar(val, 5)}</td>
-      <td className="border border-black px-1 py-0.5 text-center font-bold text-xs w-[6.5%]">{getStar(val, 6)}</td>
-      <td className="border border-black px-1 py-0.5 text-center font-bold text-xs w-[6.5%]">{getStar(val, 7)}</td>
+      <td style={{ border: '1px solid black', padding: '1.5px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', width: '6.5%' }}>{getStar(val, 1)}</td>
+      <td style={{ border: '1px solid black', padding: '1.5px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', width: '6.5%' }}>{getStar(val, 2)}</td>
+      <td style={{ border: '1px solid black', padding: '1.5px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', width: '6.5%' }}>{getStar(val, 3)}</td>
+      <td style={{ border: '1px solid black', padding: '1.5px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', width: '6.5%' }}>{getStar(val, 4)}</td>
+      <td style={{ border: '1px solid black', padding: '1.5px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', width: '6.5%' }}>{getStar(val, 5)}</td>
+      <td style={{ border: '1px solid black', padding: '1.5px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', width: '6.5%' }}>{getStar(val, 6)}</td>
+      <td style={{ border: '1px solid black', padding: '1.5px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', width: '6.5%' }}>{getStar(val, 7)}</td>
     </tr>
   );
 
@@ -192,255 +221,290 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
       {/* Main A4 Paper Sheet */}
       <div 
         id="psikogram-preview-cfit3"
-        className="w-[210mm] min-h-[297mm] bg-white text-black font-serif text-[10.5px] leading-tight print:shadow-none print:m-0 print:p-0 print:w-full print:min-h-0 mx-auto"
+        className="w-[210mm] min-h-[297mm] max-h-[297mm] bg-white text-black font-serif text-[9.5px] leading-tight print:shadow-none print:m-0 print:border-none print:w-[210mm] print:min-h-[297mm] print:max-h-[297mm] print:overflow-hidden mx-auto"
         style={{
           width: '210mm',
           minHeight: '297mm',
-          padding: '10mm 14mm',
+          maxHeight: '297mm',
+          padding: '8mm 12mm',
           boxSizing: 'border-box',
-          backgroundColor: '#ffffff'
+          backgroundColor: '#ffffff',
+          color: '#000000',
+          pageBreakInside: 'avoid',
+          breakInside: 'avoid'
         }}
       >
-        {/* Header Kop Surat */}
-          <div className="flex items-center justify-between border-b-2 border-black pb-2 mb-2">
-            <div className="flex items-center">
-              <img 
-                src={LOGO_ANNUR_BASE64} 
-                alt="Logo AN-NUR Psycho Center" 
-                width="72"
-                height="72"
-                style={{ width: '72px', height: '72px', objectFit: 'contain' }}
-                className="w-16 h-16 mr-3 object-contain flex-shrink-0"
-              />
-              <div>
-                <h1 className="text-base font-bold uppercase tracking-wide leading-tight">AN-NUR PSYCHO CENTER</h1>
-                <p className="text-[9.5px] leading-tight text-gray-800">Layanan Konsultasi, Edukasi, dan Tes Psikologi Kota Probolinggo</p>
-                <p className="text-[8.5px] leading-tight text-gray-700">Jl. Hayam Wuruk II/2, Kec. Mayangan, Kota Probolinggo | SIPP: {psikolog?.sipp || '20250059-2025-01-0567'}</p>
-                <p className="text-[8px] leading-tight text-gray-600">Email: annurpsychocenter@gmail.com | IG: @annurpsychocenter</p>
-              </div>
-            </div>
-            <div className="border border-black px-3 py-1 font-bold text-[10px] tracking-widest self-start">
-              RAHASIA
-            </div>
-          </div>
+        {/* Header Kop Surat (Table layout for 100% Word & PDF fidelity) */}
+        <table style={{ width: '100%', borderCollapse: 'collapse', border: 'none', borderBottom: '2px solid black', marginBottom: '6px', paddingBottom: '3px' }}>
+          <tbody>
+            <tr>
+              <td style={{ width: '68px', verticalAlign: 'middle', border: 'none', padding: '0 6px 4px 0' }}>
+                <img 
+                  src={LOGO_ANNUR_BASE64} 
+                  alt="Logo AN-NUR Psycho Center" 
+                  width="64"
+                  height="64"
+                  style={{ width: '64px', height: '64px', objectFit: 'contain', display: 'block' }}
+                />
+              </td>
+              <td style={{ verticalAlign: 'middle', border: 'none', padding: '0 0 4px 0', textAlign: 'left' }}>
+                <div style={{ fontSize: '14.5px', fontWeight: 'bold', textTransform: 'uppercase', lineHeight: '1.15', letterSpacing: '0.5px' }}>
+                  AN-NUR PSYCHO CENTER
+                </div>
+                <div style={{ fontSize: '9px', lineHeight: '1.2', color: '#1f2937' }}>
+                  Layanan Konsultasi, Edukasi, dan Tes Psikologi Kota Probolinggo
+                </div>
+                <div style={{ fontSize: '8.5px', lineHeight: '1.2', color: '#374151' }}>
+                  Jl. Hayam Wuruk II/2, Kec. Mayangan, Kota Probolinggo | SIPP: {psikolog?.sipp || '20250059-2025-01-0567'}
+                </div>
+                <div style={{ fontSize: '7.5px', lineHeight: '1.2', color: '#4b5563' }}>
+                  Email: annurpsychocenter@gmail.com | IG: @annurpsychocenter
+                </div>
+              </td>
+              <td style={{ width: '85px', verticalAlign: 'top', textAlign: 'right', border: 'none', padding: '0 0 4px 0' }}>
+                <div style={{ display: 'inline-block', border: '1px solid black', padding: '2px 8px', fontWeight: 'bold', fontSize: '9px', letterSpacing: '1.5px', textAlign: 'center' }}>
+                  RAHASIA
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
-          {/* Title */}
-          <div className="text-center mb-3">
-            <h2 className="text-sm font-bold uppercase tracking-wider underline">HASIL PEMERIKSAAN PSIKOLOGIS</h2>
-          </div>
+        {/* Title */}
+        <div style={{ textAlign: 'center', marginBottom: '6px' }}>
+          <span style={{ fontSize: '12.5px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.8px', textDecoration: 'underline' }}>
+            HASIL PEMERIKSAAN PSIKOLOGIS
+          </span>
+        </div>
 
-          {/* Data Klien */}
-          <div className="mb-2.5">
-            <table className="w-full border-none text-[10px]">
-              <tbody>
-                <tr>
-                  <td className="border-none py-0.5 w-[14%] font-medium">Nama</td>
-                  <td className="border-none py-0.5 w-[2%]">:</td>
-                  <td className="border-none py-0.5 w-[42%] font-bold uppercase">{clientData.nama || '-'}</td>
-                  <td className="border-none py-0.5 w-[16%] font-medium">Jenjang / Sekolah</td>
-                  <td className="border-none py-0.5 w-[2%]">:</td>
-                  <td className="border-none py-0.5 font-semibold">
-                    {clientData.pendidikan ? `${clientData.pendidikan}` : ''} {clientData.asalSekolah ? `- ${clientData.asalSekolah}` : ''}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="border-none py-0.5 font-medium">Usia</td>
-                  <td className="border-none py-0.5">:</td>
-                  <td className="border-none py-0.5">{calculateAge(clientData.tanggalLahir, clientData.tanggalTes) || '-'}</td>
-                  <td className="border-none py-0.5 font-medium">Tanggal Tes</td>
-                  <td className="border-none py-0.5">:</td>
-                  <td className="border-none py-0.5">{testDateFormatted || '-'}</td>
-                </tr>
-                <tr>
-                  <td className="border-none py-0.5 font-medium">Jenis Kelamin</td>
-                  <td className="border-none py-0.5">:</td>
-                  <td className="border-none py-0.5">{clientData.jenisKelamin || '-'}</td>
-                  <td className="border-none py-0.5 font-medium">No. Laporan</td>
-                  <td className="border-none py-0.5">:</td>
-                  <td className="border-none py-0.5">{clientData.nomorLaporan || '-'}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        {/* Data Klien */}
+        <table style={{ width: '100%', borderCollapse: 'collapse', border: 'none', fontSize: '9px', marginBottom: '6px' }}>
+          <tbody>
+            <tr>
+              <td style={{ border: 'none', padding: '1px 0', width: '13%', fontWeight: 500 }}>Nama</td>
+              <td style={{ border: 'none', padding: '1px 0', width: '2%' }}>:</td>
+              <td style={{ border: 'none', padding: '1px 0', width: '43%', fontWeight: 'bold', textTransform: 'uppercase' }}>{clientData.nama || '-'}</td>
+              <td style={{ border: 'none', padding: '1px 0', width: '16%', fontWeight: 500 }}>Jenjang / Sekolah</td>
+              <td style={{ border: 'none', padding: '1px 0', width: '2%' }}>:</td>
+              <td style={{ border: 'none', padding: '1px 0', fontWeight: 'bold' }}>
+                {clientData.pendidikan ? `${clientData.pendidikan}` : ''} {clientData.asalSekolah ? `- ${clientData.asalSekolah}` : ''}
+              </td>
+            </tr>
+            <tr>
+              <td style={{ border: 'none', padding: '1px 0', fontWeight: 500 }}>Usia</td>
+              <td style={{ border: 'none', padding: '1px 0' }}>:</td>
+              <td style={{ border: 'none', padding: '1px 0' }}>{calculateAge(clientData.tanggalLahir, clientData.tanggalTes) || '-'}</td>
+              <td style={{ border: 'none', padding: '1px 0', fontWeight: 500 }}>Tanggal Tes</td>
+              <td style={{ border: 'none', padding: '1px 0' }}>:</td>
+              <td style={{ border: 'none', padding: '1px 0' }}>{testDateFormatted || '-'}</td>
+            </tr>
+            <tr>
+              <td style={{ border: 'none', padding: '1px 0', fontWeight: 500 }}>Jenis Kelamin</td>
+              <td style={{ border: 'none', padding: '1px 0' }}>:</td>
+              <td style={{ border: 'none', padding: '1px 0' }}>{clientData.jenisKelamin || '-'}</td>
+              <td style={{ border: 'none', padding: '1px 0', fontWeight: 500 }}>No. Laporan</td>
+              <td style={{ border: 'none', padding: '1px 0' }}>:</td>
+              <td style={{ border: 'none', padding: '1px 0' }}>{clientData.nomorLaporan || '-'}</td>
+            </tr>
+          </tbody>
+        </table>
 
-          {/* 1. Taraf Kecerdasan IQ CFIT Skala 3 */}
-          <div className="mb-2.5">
-            <table className="w-full border-collapse border border-black text-center text-[9px] leading-tight">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border border-black p-1 font-bold text-center w-[20%]" rowSpan={2}>
-                    PSIKOGRAM<br/>Taraf Kecerdasan (CFIT)
-                  </th>
-                  <th className="border border-black p-0.5 w-[11.4%]">Sangat Rendah<br/>&lt; 70</th>
-                  <th className="border border-black p-0.5 w-[11.4%]">Rendah<br/>70 - 79</th>
-                  <th className="border border-black p-0.5 w-[11.4%]">Rata-rata Bawah<br/>80 - 89</th>
-                  <th className="border border-black p-0.5 w-[11.4%]">Rata-rata<br/>90 - 109</th>
-                  <th className="border border-black p-0.5 w-[11.4%]">Rata-rata Atas<br/>110 - 119</th>
-                  <th className="border border-black p-0.5 w-[11.4%]">Tinggi<br/>120 - 129</th>
-                  <th className="border border-black p-0.5 w-[11.4%]">Sangat Tinggi<br/>&ge; 130</th>
-                </tr>
-                <tr className="h-6">
-                  <td className="border border-black font-bold text-base">{iqNum !== null && iqNum < 70 ? '✓' : ''}</td>
-                  <td className="border border-black font-bold text-base">{iqNum !== null && iqNum >= 70 && iqNum <= 79 ? '✓' : ''}</td>
-                  <td className="border border-black font-bold text-base">{iqNum !== null && iqNum >= 80 && iqNum <= 89 ? '✓' : ''}</td>
-                  <td className="border border-black font-bold text-base">{iqNum !== null && iqNum >= 90 && iqNum <= 109 ? '✓' : ''}</td>
-                  <td className="border border-black font-bold text-base">{iqNum !== null && iqNum >= 110 && iqNum <= 119 ? '✓' : ''}</td>
-                  <td className="border border-black font-bold text-base">{iqNum !== null && iqNum >= 120 && iqNum <= 129 ? '✓' : ''}</td>
-                  <td className="border border-black font-bold text-base">{iqNum !== null && iqNum >= 130 ? '✓' : ''}</td>
-                </tr>
-              </thead>
-            </table>
-            <div className="flex justify-between items-center text-[9px] mt-0.5 italic text-gray-700 px-1">
-              <span>* Skor IQ CFIT Skala 3: <strong>{safeState.iqScore !== '' ? safeState.iqScore : '-'}</strong> ({safeState.iqLabel || getIqClassification(safeState.iqScore)})</span>
-              <span>Raw Score: {safeState.rawScoreTotal !== '' ? safeState.rawScoreTotal : '-'} / 50</span>
-            </div>
-          </div>
+        {/* 1. Taraf Kecerdasan IQ CFIT Skala 3 */}
+        <div style={{ marginBottom: '6px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black', textAlign: 'center', fontSize: '8.5px', lineHeight: '1.15' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f3f4f6' }}>
+                <th style={{ border: '1px solid black', padding: '2px', fontWeight: 'bold', textAlign: 'center', width: '20%' }} rowSpan={2}>
+                  PSIKOGRAM<br/>Taraf Kecerdasan (CFIT)
+                </th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Sangat Rendah<br/>&lt; 70</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Rendah<br/>70 - 79</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Rata-rata Bawah<br/>80 - 89</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Rata-rata<br/>90 - 109</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Rata-rata Atas<br/>110 - 119</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Tinggi<br/>120 - 129</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%' }}>Sangat Tinggi<br/>&ge; 130</th>
+              </tr>
+              <tr style={{ height: '18px' }}>
+                <td style={{ border: '1px solid black', fontWeight: 'bold', fontSize: '12px' }}>{iqNum !== null && iqNum < 70 ? '✓' : ''}</td>
+                <td style={{ border: '1px solid black', fontWeight: 'bold', fontSize: '12px' }}>{iqNum !== null && iqNum >= 70 && iqNum <= 79 ? '✓' : ''}</td>
+                <td style={{ border: '1px solid black', fontWeight: 'bold', fontSize: '12px' }}>{iqNum !== null && iqNum >= 80 && iqNum <= 89 ? '✓' : ''}</td>
+                <td style={{ border: '1px solid black', fontWeight: 'bold', fontSize: '12px' }}>{iqNum !== null && iqNum >= 90 && iqNum <= 109 ? '✓' : ''}</td>
+                <td style={{ border: '1px solid black', fontWeight: 'bold', fontSize: '12px' }}>{iqNum !== null && iqNum >= 110 && iqNum <= 119 ? '✓' : ''}</td>
+                <td style={{ border: '1px solid black', fontWeight: 'bold', fontSize: '12px' }}>{iqNum !== null && iqNum >= 120 && iqNum <= 129 ? '✓' : ''}</td>
+                <td style={{ border: '1px solid black', fontWeight: 'bold', fontSize: '12px' }}>{iqNum !== null && iqNum >= 130 ? '✓' : ''}</td>
+              </tr>
+            </thead>
+          </table>
+          <table style={{ width: '100%', border: 'none', borderCollapse: 'collapse', fontSize: '8px', marginTop: '1px', fontStyle: 'italic', color: '#374151' }}>
+            <tbody>
+              <tr>
+                <td style={{ border: 'none', padding: '0', textAlign: 'left' }}>
+                  * Skor IQ CFIT Skala 3: <strong style={{ fontStyle: 'normal' }}>{safeState.iqScore !== '' ? safeState.iqScore : '-'}</strong> ({safeState.iqLabel || getIqClassification(safeState.iqScore)})
+                </td>
+                <td style={{ border: 'none', padding: '0', textAlign: 'right' }}>
+                  Raw Score: {safeState.rawScoreTotal !== '' ? safeState.rawScoreTotal : '-'} / 50
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-          {/* 2. Tabel Aspek Psikologis CFIT Skala 3 */}
-          <div className="mb-2.5">
-            <table className="w-full border-collapse border border-black">
-              <thead>
-                <tr className="bg-gray-100 text-[10px]">
-                  <th className="border border-black p-1 w-[4%]" rowSpan={2}>No</th>
-                  <th className="border border-black p-1 text-left" rowSpan={2}>Aspek Psikologis</th>
-                  <th className="border border-black p-0.5 text-center" colSpan={7}>Kapasitas Aspek</th>
-                </tr>
-                <tr className="bg-gray-200 text-[9px] text-center font-bold">
-                  <th className="border border-black p-0.5 w-[6.5%]">SR</th>
-                  <th className="border border-black p-0.5 w-[6.5%]">R</th>
-                  <th className="border border-black p-0.5 w-[6.5%]">C-</th>
-                  <th className="border border-black p-0.5 w-[6.5%]">C</th>
-                  <th className="border border-black p-0.5 w-[6.5%]">C+</th>
-                  <th className="border border-black p-0.5 w-[6.5%]">T</th>
-                  <th className="border border-black p-0.5 w-[6.5%]">ST</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Bagian A */}
-                <tr>
-                  <td className="border border-black px-2 py-0.5 bg-gray-100 font-bold text-[10px]" colSpan={9}>
-                    A. Aspek Kecerdasan Umum
-                  </td>
-                </tr>
-                {renderAspectRow('1', 'Pemahaman', 'Kapasitas memahami pola aturan, instruksi, dan persyaratan masalah secara tepat.', kecerdasanUmum.pemahaman)}
-                {renderAspectRow('2', 'Penalaran', 'Kapasitas menalar secara logis, menghubungkan beragam premis, serta menyelesaikan masalah baru (fluid intelligence).', kecerdasanUmum.penalaran)}
-                {renderAspectRow('3', 'Daya Analisis', 'Kapasitas mengurai stimulus masalah menjadi bagian-bagian terperinci serta mendeteksi elemen kritis.', kecerdasanUmum.dayaAnalisis)}
-                {renderAspectRow('4', 'Daya Sintesis', 'Kapasitas mengintegrasikan potongan informasi yang terpisah menjadi satu kesatuan pemahaman yang utuh.', kecerdasanUmum.dayaSintesis)}
-                {renderAspectRow('5', 'Daya Ingat', 'Kapasitas memori kerja (working memory) dalam mempertahankan dan merecall aturan-aturan pola abstrak.', kecerdasanUmum.dayaIngat)}
+        {/* 2. Tabel Aspek Psikologis CFIT Skala 3 */}
+        <div style={{ marginBottom: '6px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f3f4f6', fontSize: '9px' }}>
+                <th style={{ border: '1px solid black', padding: '1.5px', width: '4%' }} rowSpan={2}>No</th>
+                <th style={{ border: '1px solid black', padding: '1.5px 4px', textAlign: 'left' }} rowSpan={2}>Aspek Psikologis</th>
+                <th style={{ border: '1px solid black', padding: '1.5px', textAlign: 'center' }} colSpan={7}>Kapasitas Aspek</th>
+              </tr>
+              <tr style={{ backgroundColor: '#e5e7eb', fontSize: '8px', textAlign: 'center', fontWeight: 'bold' }}>
+                <th style={{ border: '1px solid black', padding: '1px', width: '6.5%' }}>SR</th>
+                <th style={{ border: '1px solid black', padding: '1px', width: '6.5%' }}>R</th>
+                <th style={{ border: '1px solid black', padding: '1px', width: '6.5%' }}>C-</th>
+                <th style={{ border: '1px solid black', padding: '1px', width: '6.5%' }}>C</th>
+                <th style={{ border: '1px solid black', padding: '1px', width: '6.5%' }}>C+</th>
+                <th style={{ border: '1px solid black', padding: '1px', width: '6.5%' }}>T</th>
+                <th style={{ border: '1px solid black', padding: '1px', width: '6.5%' }}>ST</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* Bagian A */}
+              <tr>
+                <td style={{ border: '1px solid black', padding: '1.5px 4px', backgroundColor: '#f3f4f6', fontWeight: 'bold', fontSize: '9px' }} colSpan={9}>
+                  A. Aspek Kecerdasan Umum
+                </td>
+              </tr>
+              {renderAspectRow('1', 'Pemahaman', 'Kapasitas memahami pola aturan, instruksi, dan persyaratan masalah secara tepat.', kecerdasanUmum.pemahaman)}
+              {renderAspectRow('2', 'Penalaran', 'Kapasitas menalar secara logis, menghubungkan beragam premis, serta menyelesaikan masalah baru (fluid intelligence).', kecerdasanUmum.penalaran)}
+              {renderAspectRow('3', 'Daya Analisis', 'Kapasitas mengurai stimulus masalah menjadi bagian-bagian terperinci serta mendeteksi elemen kritis.', kecerdasanUmum.dayaAnalisis)}
+              {renderAspectRow('4', 'Daya Sintesis', 'Kapasitas mengintegrasikan potongan informasi yang terpisah menjadi satu kesatuan pemahaman yang utuh.', kecerdasanUmum.dayaSintesis)}
+              {renderAspectRow('5', 'Daya Ingat', 'Kapasitas memori kerja (working memory) dalam mempertahankan dan merecall aturan-aturan pola abstrak.', kecerdasanUmum.dayaIngat)}
 
-                {/* Bagian B */}
-                <tr>
-                  <td className="border border-black px-2 py-0.5 bg-gray-100 font-bold text-[10px]" colSpan={9}>
-                    B. Aspek Bakat Kemampuan
-                  </td>
-                </tr>
-                {renderAspectRow('1', 'Sistematika Berpikir', 'Kemampuan alur berpikir terstruktur, runtut, dan berkesinambungan saat menghadapi deret tugas.', bakatKemampuan.sistematikaBerpikir)}
-                {renderAspectRow('2', 'Logika Hubungan', 'Kemampuan menangkap korelasi kausal, analogi abstrak, dan transformasi matriks secara konsisten.', bakatKemampuan.logikaHubungan)}
-                {renderAspectRow('3', 'Ketajaman Diferensiasi', 'Kemampuan membedakan detail halus, mendeteksi penyimpangan, dan mengklasifikasikan pola objek.', bakatKemampuan.ketajamanDiferensiasi)}
-              </tbody>
-            </table>
-            <div className="text-[8.5px] mt-0.5 italic text-gray-600 px-1">
-              Keterangan Taraf: SR=Sangat Rendah, R=Rendah, C-=Rata-rata Bawah, C=Rata-rata, C+=Rata-rata Atas, T=Tinggi, ST=Sangat Tinggi
-            </div>
-          </div>
-
-          {/* 3. Minat RMIB & Pekerjaan Impian (Side-by-side) */}
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 mb-2.5">
-            {/* Top 3 Minat RMIB */}
-            <div className="sm:col-span-8">
-              <table className="w-full border-collapse border border-black text-[9.5px]">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border border-black px-2 py-0.5 text-left font-bold" colSpan={3}>
-                      C. Aspek Minat (RMIB - Rothwell Miller)
-                    </th>
-                  </tr>
-                  <tr className="bg-gray-50 text-[8.5px] text-center font-bold">
-                    <th className="border border-black p-0.5 w-[6%]">No</th>
-                    <th className="border border-black p-0.5 w-[30%]">Bidang Minat</th>
-                    <th className="border border-black p-0.5">Deskripsi Ringkas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rmibInterests.map((interest, idx) => (
-                    <tr key={idx}>
-                      <td className="border border-black p-1 text-center font-bold">{idx + 1}</td>
-                      <td className="border border-black p-1 font-semibold text-gray-900">{interest.name || '-'}</td>
-                      <td className="border border-black p-1 text-[8.5px] text-gray-700 leading-tight">
-                        {interest.description || '-'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Top 3 Pekerjaan Impian */}
-            <div className="sm:col-span-4">
-              <table className="w-full border-collapse border border-black text-[9.5px] h-full">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border border-black px-2 py-0.5 text-left font-bold" colSpan={2}>
-                      Pekerjaan Impian
-                    </th>
-                  </tr>
-                  <tr className="bg-gray-50 text-[8.5px] text-center font-bold">
-                    <th className="border border-black p-0.5 w-[15%]">No</th>
-                    <th className="border border-black p-0.5">Cita-cita / Impian Klien</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[0, 1, 2].map(idx => (
-                    <tr key={idx}>
-                      <td className="border border-black p-1 text-center font-bold">{idx + 1}</td>
-                      <td className="border border-black p-1 font-semibold text-gray-900 text-[9px]">
-                        {dreamJobs[idx] || '-'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* 4. Rekomendasi Tindak Lanjut */}
-          <div className="mb-2">
-            <table className="w-full border-collapse border border-black text-[9.5px]">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border border-black px-2 py-0.5 text-center font-bold uppercase tracking-wider">
-                    D. REKOMENDASI TINDAK LANJUT
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="border border-black p-2 align-top text-[9px] leading-relaxed text-justify">
-                    {renderFormattedRecommendation(safeState.rekomendasi)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* 5. Tanda Tangan Psikolog */}
-          <div className="flex justify-end mt-1 mr-4 text-center text-[9.5px]">
-            <div>
-              <p className="mb-0.5">{psikolog?.kota || 'Probolinggo'}, {testDateFormatted || currentDateFormatted}</p>
-              <p className="mb-10 font-medium">Psikolog Pemeriksa,</p>
-              
-              <div className="flex justify-center items-center relative mb-0.5">
-                <p className="font-bold border-b border-black inline-block z-10 relative bg-white px-1">
-                  {psikolog?.nama || 'Muhammad Ikhsan, M.Psi., Psikolog'}
-                </p>
-              </div>
-              <p className="text-[8.5px] text-gray-700">SIPP. {psikolog?.sipp || '20250059-2025-01-0567'}</p>
-              {psikolog?.siap && (
-                <p className="text-[8px] text-gray-600">No. SIAP: {psikolog.siap}</p>
-              )}
-            </div>
+              {/* Bagian B */}
+              <tr>
+                <td style={{ border: '1px solid black', padding: '1.5px 4px', backgroundColor: '#f3f4f6', fontWeight: 'bold', fontSize: '9px' }} colSpan={9}>
+                  B. Aspek Bakat Kemampuan
+                </td>
+              </tr>
+              {renderAspectRow('1', 'Sistematika Berpikir', 'Kemampuan alur berpikir terstruktur, runtut, dan berkesinambungan saat menghadapi deret tugas.', bakatKemampuan.sistematikaBerpikir)}
+              {renderAspectRow('2', 'Logika Hubungan', 'Kemampuan menangkap korelasi kausal, analogi abstrak, dan transformasi matriks secara konsisten.', bakatKemampuan.logikaHubungan)}
+              {renderAspectRow('3', 'Ketajaman Diferensiasi', 'Kemampuan membedakan detail halus, mendeteksi penyimpangan, dan mengklasifikasikan pola objek.', bakatKemampuan.ketajamanDiferensiasi)}
+            </tbody>
+          </table>
+          <div style={{ fontSize: '7.5px', marginTop: '1px', fontStyle: 'italic', color: '#4b5563' }}>
+            Keterangan Taraf: SR=Sangat Rendah, R=Rendah, C-=Rata-rata Bawah, C=Rata-rata, C+=Rata-rata Atas, T=Tinggi, ST=Sangat Tinggi
           </div>
         </div>
+
+        {/* 3. Minat RMIB & Pekerjaan Impian (Side-by-side table layout for Word & PDF) */}
+        <table style={{ width: '100%', border: 'none', borderCollapse: 'collapse', marginBottom: '6px' }}>
+          <tbody>
+            <tr>
+              {/* Kolom Kiri: RMIB (66%) */}
+              <td style={{ width: '66%', verticalAlign: 'top', border: 'none', padding: '0 5px 0 0' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black', fontSize: '8.5px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f3f4f6' }}>
+                      <th colSpan={3} style={{ border: '1px solid black', padding: '2px 4px', textAlign: 'left', fontWeight: 'bold' }}>
+                        C. Aspek Minat (RMIB - Rothwell Miller)
+                      </th>
+                    </tr>
+                    <tr style={{ backgroundColor: '#f9fafb', fontSize: '7.5px', textAlign: 'center', fontWeight: 'bold' }}>
+                      <th style={{ border: '1px solid black', padding: '1px', width: '6%' }}>No</th>
+                      <th style={{ border: '1px solid black', padding: '1px', width: '30%' }}>Bidang Minat</th>
+                      <th style={{ border: '1px solid black', padding: '1px' }}>Deskripsi Ringkas</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rmibInterests.map((interest, idx) => (
+                      <tr key={idx}>
+                        <td style={{ border: '1px solid black', padding: '1.5px', textAlign: 'center', fontWeight: 'bold' }}>{idx + 1}</td>
+                        <td style={{ border: '1px solid black', padding: '1.5px 3px', fontWeight: 'bold', color: '#111827' }}>{interest.name || '-'}</td>
+                        <td style={{ border: '1px solid black', padding: '1.5px 3px', fontSize: '7.5px', color: '#374151', lineHeight: '1.15' }}>{interest.description || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </td>
+
+              {/* Kolom Kanan: Pekerjaan Impian (34%) */}
+              <td style={{ width: '34%', verticalAlign: 'top', border: 'none', padding: '0' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black', fontSize: '8.5px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f3f4f6' }}>
+                      <th colSpan={2} style={{ border: '1px solid black', padding: '2px 4px', textAlign: 'left', fontWeight: 'bold' }}>
+                        Pekerjaan Impian
+                      </th>
+                    </tr>
+                    <tr style={{ backgroundColor: '#f9fafb', fontSize: '7.5px', textAlign: 'center', fontWeight: 'bold' }}>
+                      <th style={{ border: '1px solid black', padding: '1px', width: '16%' }}>No</th>
+                      <th style={{ border: '1px solid black', padding: '1px' }}>Cita-cita / Impian Klien</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[0, 1, 2].map(idx => (
+                      <tr key={idx}>
+                        <td style={{ border: '1px solid black', padding: '2px', textAlign: 'center', fontWeight: 'bold' }}>{idx + 1}</td>
+                        <td style={{ border: '1px solid black', padding: '2px 3px', fontWeight: 'bold', color: '#111827', fontSize: '8px' }}>
+                          {dreamJobs[idx] || '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* 4. Rekomendasi Tindak Lanjut */}
+        <div style={{ marginBottom: '5px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black', fontSize: '8.5px' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f3f4f6' }}>
+                <th style={{ border: '1px solid black', padding: '2px 4px', textAlign: 'center', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  D. REKOMENDASI TINDAK LANJUT
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ border: '1px solid black', padding: '4px 6px', verticalAlign: 'top', textAlign: 'justify', lineHeight: '1.25' }}>
+                  {renderFormattedRecommendation(safeState.rekomendasi)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* 5. Tanda Tangan Psikolog (Table layout for 100% Word alignment) */}
+        <table style={{ width: '100%', border: 'none', borderCollapse: 'collapse', marginTop: '2px' }}>
+          <tbody>
+            <tr>
+              <td style={{ width: '58%', border: 'none' }}></td>
+              <td style={{ width: '42%', border: 'none', textAlign: 'center', fontSize: '8.5px', lineHeight: '1.15' }}>
+                <div>{psikolog?.kota || 'Probolinggo'}, {testDateFormatted || currentDateFormatted}</div>
+                <div style={{ fontWeight: 500, marginBottom: '32px' }}>Psikolog Pemeriksa,</div>
+                <div>
+                  <span style={{ fontWeight: 'bold', borderBottom: '1px solid black', display: 'inline-block', padding: '0 4px' }}>
+                    {psikolog?.nama || 'Muhammad Ikhsan, M.Psi., Psikolog'}
+                  </span>
+                </div>
+                <div style={{ fontSize: '7.5px', color: '#374151', marginTop: '1px' }}>
+                  SIPP. {psikolog?.sipp || '20250059-2025-01-0567'}
+                </div>
+                {psikolog?.siap && (
+                  <div style={{ fontSize: '7px', color: '#4b5563' }}>
+                    No. SIAP: {psikolog.siap}
+                  </div>
+                )}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
+    </div>
   );
 }
