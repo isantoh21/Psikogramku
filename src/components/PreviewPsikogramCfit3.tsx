@@ -583,7 +583,7 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
               <td style={{ width: '42%', border: 'none', textAlign: 'center', fontSize: '8.5px', lineHeight: '1.15' }}>
                 <div>{psikolog?.kota || 'Probolinggo'}, {testDateFormatted || currentDateFormatted}</div>
                 <div style={{ fontWeight: 500, marginBottom: '2px' }}>Psikolog Pemeriksa,</div>
-                <div style={{ height: '62px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '2px 0' }}>
+                <div style={{ height: '56px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '2px 0' }}>
                   <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                     {/* Stempel AN-NUR (Cap Resmi menimpa sisi kiri tanda tangan secara presisi & tajam) */}
                     <img
@@ -591,26 +591,24 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
                       alt="Stempel AN-NUR Psycho Center"
                       style={{
                         position: 'absolute',
-                        left: isChozina ? '-36px' : '-28px',
-                        top: '-8px',
-                        width: '68px',
-                        height: '68px',
+                        left: isChozina ? '-26px' : '-24px',
+                        top: '-6px',
+                        width: '64px',
+                        height: '64px',
                         objectFit: 'contain',
                         mixBlendMode: 'multiply',
-                        filter: 'contrast(1.45) saturate(1.2) brightness(0.96)',
-                        imageRendering: '-webkit-optimize-contrast',
+                        filter: 'contrast(1.4) saturate(1.15)',
                         pointerEvents: 'none',
                         zIndex: 1
                       }}
                     />
-                    {/* Tanda Tangan (Ukuran diperbesar agar proporsional dan jelas) */}
+                    {/* Tanda Tangan (Ultra-Crisp Anti-Aliased & Trimmed) */}
                     <img
                       src={signatureBase64}
                       alt={isChozina ? "Tanda Tangan Chozina" : "Tanda Tangan Muhammad Ikhsan"}
                       style={{
-                        height: isChozina ? '58px' : '52px',
-                        maxHeight: '60px',
-                        maxWidth: '145px',
+                        height: isChozina ? '50px' : '44px',
+                        maxWidth: '135px',
                         objectFit: 'contain',
                         position: 'relative',
                         zIndex: 2,
