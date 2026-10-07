@@ -54,7 +54,7 @@ export function AISettingsModal({ isOpen, onClose, onSaved }: AISettingsModalPro
   };
 
   const handleFetchModels = async () => {
-    const baseUrl = settings.baseUrl || (settings.provider === 'koboillm' ? 'https://api.koboillm.com/v1' : '');
+    const baseUrl = settings.baseUrl || (settings.provider === 'koboillm' ? 'https://api.koboillm.com/v1' : (settings.provider === 'sumopod' ? 'https://ai.sumopod.com/v1' : ''));
     if (!baseUrl) {
       setTestResult({
         success: false,
@@ -149,7 +149,7 @@ export function AISettingsModal({ isOpen, onClose, onSaved }: AISettingsModalPro
     }, 600);
   };
 
-  const isCustomOrKoboi = settings.provider === 'custom' || settings.provider === 'koboillm';
+  const isCustomOrKoboi = settings.provider === 'custom' || settings.provider === 'koboillm' || settings.provider === 'sumopod';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
@@ -297,7 +297,10 @@ export function AISettingsModal({ isOpen, onClose, onSaved }: AISettingsModalPro
                   <button
                     key={m}
                     type="button"
-                    onClick={() => setSettings(p => ({ ...p, model: m }))}
+                    onClick={() => {
+                      const ctxLen = m.includes('luna') ? 1050000 : (m.includes('nano') ? 272000 : 128000);
+                      setSettings(p => ({ ...p, model: m, contextLength: ctxLen }));
+                    }}
                     className={`px-2 py-1 text-xs rounded-md border font-mono transition ${
                       settings.model === m 
                         ? 'bg-indigo-600 text-white border-indigo-600 font-semibold' 
@@ -307,6 +310,31 @@ export function AISettingsModal({ isOpen, onClose, onSaved }: AISettingsModalPro
                     {m}
                   </button>
                 ))
+              ) : settings.provider === 'sumopod' ? (
+                <>
+                  <button 
+                    type="button"
+                    onClick={() => setSettings(p => ({ ...p, model: 'gpt-5-nano', contextLength: 272000 }))}
+                    className={`px-2.5 py-1 text-xs rounded-md border font-mono transition ${
+                      settings.model === 'gpt-5-nano'
+                        ? 'bg-indigo-600 text-white border-indigo-600 font-semibold shadow-xs'
+                        : 'bg-gray-100 hover:bg-indigo-100 hover:text-indigo-700 border-gray-200 text-gray-800'
+                    }`}
+                  >
+                    gpt-5-nano (Default)
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setSettings(p => ({ ...p, model: 'gpt-6-luna', contextLength: 1050000 }))}
+                    className={`px-2.5 py-1 text-xs rounded-md border font-mono transition ${
+                      settings.model === 'gpt-6-luna'
+                        ? 'bg-indigo-600 text-white border-indigo-600 font-semibold shadow-xs'
+                        : 'bg-gray-100 hover:bg-indigo-100 hover:text-indigo-700 border-gray-200 text-gray-800'
+                    }`}
+                  >
+                    gpt-6-luna (1M Context)
+                  </button>
+                </>
               ) : (
                 isCustomOrKoboi ? (
                   <>

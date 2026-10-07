@@ -25,13 +25,13 @@ export const PROVIDER_OPTIONS: {
   {
     id: 'sumopod',
     name: 'Sumopod AI (OpenAI Compatible)',
-    description: 'Endpoint Sumopod v1 (glm-5.3-flash, deepseek-v4.1-flash) siap pakai saat Gemini limit.',
-    defaultModel: 'glm-5.3-flash',
+    description: 'Endpoint Sumopod v1 (gpt-5-nano, gpt-6-luna) cepat, akurat & mendukung Vision.',
+    defaultModel: 'gpt-5-nano',
     defaultBaseUrl: 'https://ai.sumopod.com/v1',
     defaultApiKey: 'sk-DFe4pA8Vmm2p4OIr01pwJw',
     placeholderKey: 'sk-DFe4...',
-    defaultContextLength: 128000,
-    supportsVision: false
+    defaultContextLength: 272000,
+    supportsVision: true
   },
   {
     id: 'koboillm',
@@ -114,7 +114,7 @@ export function getAISettings(): AISettings {
         saveAISettings(updated);
         return updated;
       }
-      // Auto-fill active key and baseUrl for Sumopod if missing
+      // Auto-fill active key, model, and baseUrl for Sumopod
       if (parsed.provider === 'sumopod') {
         let changed = false;
         if (!parsed.apiKey || parsed.apiKey.trim() === '') {
@@ -125,12 +125,16 @@ export function getAISettings(): AISettings {
           parsed.baseUrl = 'https://ai.sumopod.com/v1';
           changed = true;
         }
-        if (!parsed.model || parsed.model.trim() === '') {
-          parsed.model = 'glm-5.3-flash';
+        if (!parsed.model || parsed.model.trim() === '' || parsed.model === 'glm-5.3-flash' || parsed.model.includes('deepseek')) {
+          parsed.model = 'gpt-5-nano';
           changed = true;
         }
-        if (parsed.supportsVision !== false) {
-          parsed.supportsVision = false;
+        if (parsed.supportsVision !== true) {
+          parsed.supportsVision = true;
+          changed = true;
+        }
+        if (!parsed.contextLength || parsed.contextLength === 128000) {
+          parsed.contextLength = 272000;
           changed = true;
         }
         if (changed) {

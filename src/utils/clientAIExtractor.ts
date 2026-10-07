@@ -117,7 +117,7 @@ export async function callDirectAI({
   } else if (settings.provider === 'sumopod') {
     baseUrl = baseUrl || 'https://ai.sumopod.com/v1';
     apiKey = apiKey || 'sk-DFe4pA8Vmm2p4OIr01pwJw';
-    model = model || 'glm-5.3-flash';
+    model = model || 'gpt-5-nano';
   } else if (settings.provider === 'custom') {
     baseUrl = baseUrl || 'https://api.openai.com/v1';
     model = model || 'gemini/gemini-3.1-flash-lite';
@@ -283,7 +283,7 @@ export async function callDirectTextAI({
   } else if (settings.provider === 'sumopod') {
     baseUrl = baseUrl || 'https://ai.sumopod.com/v1';
     apiKey = apiKey || 'sk-DFe4pA8Vmm2p4OIr01pwJw';
-    model = model || 'glm-5.3-flash';
+    model = model || 'gpt-5-nano';
   } else if (settings.provider === 'custom') {
     baseUrl = baseUrl || 'https://api.openai.com/v1';
     model = model || 'gemini/gemini-3.1-flash-lite';

@@ -224,7 +224,7 @@ export async function callUnifiedAI({
         console.warn('Auto fetch model failed in server:', e);
       }
     }
-    const defaultFallbackModel = provider === 'sumopod' ? 'glm-5.3-flash' : 'gemini/gemini-3.1-flash-lite';
+    const defaultFallbackModel = provider === 'sumopod' ? 'gpt-5-nano' : 'gemini/gemini-3.1-flash-lite';
     model = model || defaultFallbackModel;
     if (!apiKey) {
       throw new Error(`API Key untuk ${provider} belum diisi.`);
@@ -238,7 +238,8 @@ export async function callUnifiedAI({
   const isVisionSupported = provider === 'gemini' || 
     provider === 'koboillm' || 
     provider === 'openrouter' ||
-    ((model && (model.includes('gemini') || model.includes('4o') || model.includes('vision') || model.includes('claude'))) &&
+    (provider === 'sumopod' && (model?.includes('gpt-5') || model?.includes('gpt-6'))) ||
+    ((model && (model.includes('gemini') || model.includes('4o') || model.includes('vision') || model.includes('claude') || model.includes('gpt-5') || model.includes('gpt-6'))) &&
      !model.toLowerCase().includes('glm') &&
      !model.toLowerCase().includes('deepseek'));
 
