@@ -17,6 +17,7 @@ export const PROVIDER_OPTIONS: {
   description: string; 
   defaultModel: string; 
   defaultBaseUrl?: string;
+  defaultApiKey?: string;
   placeholderKey: string;
   defaultContextLength?: number;
   supportsVision?: boolean;
@@ -27,6 +28,7 @@ export const PROVIDER_OPTIONS: {
     description: 'Endpoint Sumopod v1 (glm-5.3-flash, deepseek-v4.1-flash) siap pakai saat Gemini limit.',
     defaultModel: 'glm-5.3-flash',
     defaultBaseUrl: 'https://ai.sumopod.com/v1',
+    defaultApiKey: 'sk-DFe4pA8Vmm2p4OIr01pwJw',
     placeholderKey: 'sk-DFe4...',
     defaultContextLength: 128000,
     supportsVision: false
@@ -37,6 +39,7 @@ export const PROVIDER_OPTIONS: {
     description: 'Endpoint Koboillm API v1 (gemini/gemini-3.1-flash-lite, Context: 1.05M, Supports Vision).',
     defaultModel: 'gemini/gemini-3.1-flash-lite',
     defaultBaseUrl: 'https://api.koboillm.com/v1',
+    defaultApiKey: 'sk-wMaVBOWC1G69emLkQ5T9Ng',
     placeholderKey: 'sk-wMaV...',
     defaultContextLength: 1050000,
     supportsVision: true
@@ -110,6 +113,29 @@ export function getAISettings(): AISettings {
         };
         saveAISettings(updated);
         return updated;
+      }
+      // Auto-fill active key and baseUrl for Sumopod if missing
+      if (parsed.provider === 'sumopod') {
+        let changed = false;
+        if (!parsed.apiKey || parsed.apiKey.trim() === '') {
+          parsed.apiKey = 'sk-DFe4pA8Vmm2p4OIr01pwJw';
+          changed = true;
+        }
+        if (!parsed.baseUrl || parsed.baseUrl.trim() === '') {
+          parsed.baseUrl = 'https://ai.sumopod.com/v1';
+          changed = true;
+        }
+        if (!parsed.model || parsed.model.trim() === '') {
+          parsed.model = 'glm-5.3-flash';
+          changed = true;
+        }
+        if (parsed.supportsVision !== false) {
+          parsed.supportsVision = false;
+          changed = true;
+        }
+        if (changed) {
+          saveAISettings(parsed);
+        }
       }
       return { ...DEFAULT_AI_SETTINGS, ...parsed };
     }

@@ -235,15 +235,23 @@ export async function callUnifiedAI({
   const userContent: any[] = [
     { type: 'text', text: `${effectivePrompt}\n\nPENTING: Kembalikan HANYA format JSON valid tanpa tanda kutip markdown \`\`\`json.` }
   ];
+  const isVisionSupported = provider === 'gemini' || 
+    provider === 'koboillm' || 
+    provider === 'openrouter' ||
+    ((model && (model.includes('gemini') || model.includes('4o') || model.includes('vision') || model.includes('claude'))) &&
+     !model.toLowerCase().includes('glm') &&
+     !model.toLowerCase().includes('deepseek'));
 
   if (data && mimeType) {
-    if (mimeType.startsWith('image/')) {
+    if (isVisionSupported && mimeType.startsWith('image/')) {
       userContent.push({
         type: 'image_url',
         image_url: {
           url: `data:${mimeType};base64,${data}`
         }
       });
+    } else if (!isVisionSupported && (!text || text.trim().length < 20) && mimeType.startsWith('image/')) {
+      throw new Error(`Model ${model} (${provider.toUpperCase()}) adalah model bahasa teks murni dan tidak mendukung input gambar/Vision. File yang Anda unggah berupa gambar atau scan tanpa teks digital. Silakan pilih provider yang mendukung Vision (seperti Google Gemini atau KoboiLLM) untuk membaca dokumen ini.`);
     } else if (mimeType === 'application/pdf') {
       if (provider === 'openrouter') {
         userContent.push({

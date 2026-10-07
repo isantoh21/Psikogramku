@@ -43,6 +43,7 @@ export function AISettingsModal({ isOpen, onClose, onSaved }: AISettingsModalPro
     setSettings(prev => ({
       ...prev,
       provider,
+      apiKey: opt?.defaultApiKey || (provider === 'gemini' ? '' : prev.apiKey || ''),
       model: opt?.defaultModel || '',
       baseUrl: opt?.defaultBaseUrl !== undefined ? opt.defaultBaseUrl : (provider === 'custom' ? (prev.baseUrl || 'https://api.openai.com/v1') : ''),
       contextLength: opt?.defaultContextLength !== undefined ? opt.defaultContextLength : (prev.contextLength || 1050000),

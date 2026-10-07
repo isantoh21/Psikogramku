@@ -29,19 +29,19 @@ export {
 
 /**
  * Checks whether client-side direct execution is possible.
- * Works if provider is koboillm, custom, openai, openrouter, groq, or gemini.
+ * Works if provider is sumopod, koboillm, custom, openai, openrouter, groq, or gemini.
  */
 export function canExecuteDirectly(settings?: AISettings): boolean {
   const s = settings || getAISettings();
   if (!s) return true;
-  if (s.provider === 'koboillm') return true;
+  if (s.provider === 'koboillm' || s.provider === 'sumopod') return true;
   if (s.provider === 'custom' && !!s.baseUrl && !!s.apiKey) return true;
   if (s.apiKey && s.apiKey.trim() !== '') return true;
   return false;
 }
 
 /**
- * Execute chat completion directly from browser to AI provider (Google Gemini / OpenAI / Groq / OpenRouter).
+ * Execute chat completion directly from browser to AI provider (Google Gemini / Sumopod / KoboiLLM / OpenAI / Groq / OpenRouter).
  * This completely bypasses Vercel Serverless Function 10s timeout & 4.5MB payload limits!
  */
 export async function callDirectAI({
@@ -100,7 +100,7 @@ export async function callDirectAI({
     return cleanJsonOutput(rawOutput, fallback);
   }
 
-  // 2. OpenAI-compatible providers (Groq, OpenAI, OpenRouter, Custom, KoboiLLM)
+  // 2. OpenAI-compatible providers (Sumopod, KoboiLLM, Groq, OpenAI, OpenRouter, Custom)
   if (settings.provider === 'openai') {
     baseUrl = baseUrl || 'https://api.openai.com/v1';
     model = model || 'gpt-4o-mini';
@@ -114,6 +114,10 @@ export async function callDirectAI({
     baseUrl = baseUrl || 'https://api.koboillm.com/v1';
     apiKey = apiKey || 'sk-wMaVBOWC1G69emLkQ5T9Ng';
     model = model || 'gemini/gemini-3.1-flash-lite';
+  } else if (settings.provider === 'sumopod') {
+    baseUrl = baseUrl || 'https://ai.sumopod.com/v1';
+    apiKey = apiKey || 'sk-DFe4pA8Vmm2p4OIr01pwJw';
+    model = model || 'glm-5.3-flash';
   } else if (settings.provider === 'custom') {
     baseUrl = baseUrl || 'https://api.openai.com/v1';
     model = model || 'gemini/gemini-3.1-flash-lite';
@@ -132,32 +136,47 @@ export async function callDirectAI({
     }
   ];
 
+  // Check if model and provider support vision input (GLM-5.3-flash and DeepSeek are text-only)
+  const isVisionSupported = settings.supportsVision !== false && 
+    !model.toLowerCase().includes('glm') && 
+    !model.toLowerCase().includes('deepseek');
+
   if (data && mimeType) {
-    const isImage = mimeType.startsWith('image/');
-    if (isImage) {
-      userContent.push({
-        type: 'image_url',
-        image_url: {
-          url: `data:${mimeType};base64,${data}`
-        }
-      });
-    } else if (mimeType === 'application/pdf') {
-      if (settings.provider === 'openrouter') {
-        userContent.push({
-          type: 'file',
-          file: {
-            filename: 'document.pdf',
-            file_data: `data:application/pdf;base64,${data}`
-          }
-        });
-      } else if (settings.provider === 'koboillm' || (model && model.toLowerCase().includes('gemini'))) {
+    if (isVisionSupported) {
+      const isImage = mimeType.startsWith('image/');
+      if (isImage) {
         userContent.push({
           type: 'image_url',
           image_url: {
-            url: `data:application/pdf;base64,${data}`
+            url: `data:${mimeType};base64,${data}`
           }
         });
+      } else if (mimeType === 'application/pdf') {
+        if (settings.provider === 'openrouter') {
+          userContent.push({
+            type: 'file',
+            file: {
+              filename: 'document.pdf',
+              file_data: `data:application/pdf;base64,${data}`
+            }
+          });
+        } else if (settings.provider === 'koboillm' || (model && model.toLowerCase().includes('gemini'))) {
+          userContent.push({
+            type: 'image_url',
+            image_url: {
+              url: `data:application/pdf;base64,${data}`
+            }
+          });
+        }
       }
+    } else {
+      // Text-only model like GLM 5.3 Flash:
+      // If document has no extractable text, alert the user to use a Vision-capable model
+      if (!text || text.trim().length < 20) {
+        throw new Error(`Model ${model} (${settings.provider.toUpperCase()}) adalah model bahasa teks murni dan tidak mendukung input gambar/Vision. File yang Anda unggah berupa gambar atau scan tanpa teks digital. Silakan pilih provider yang mendukung Vision (Google Gemini atau KoboiLLM di menu ⚙️ Pengaturan AI) untuk membaca dokumen ini.`);
+      }
+      // For digital PDFs, text is already extracted and included in combinedText,
+      // so we DO NOT send image_url which causes the Sumopod/LiteLLM 400 error!
     }
   }
 
@@ -261,6 +280,10 @@ export async function callDirectTextAI({
     baseUrl = baseUrl || 'https://api.koboillm.com/v1';
     apiKey = apiKey || 'sk-wMaVBOWC1G69emLkQ5T9Ng';
     model = model || 'gemini/gemini-3.1-flash-lite';
+  } else if (settings.provider === 'sumopod') {
+    baseUrl = baseUrl || 'https://ai.sumopod.com/v1';
+    apiKey = apiKey || 'sk-DFe4pA8Vmm2p4OIr01pwJw';
+    model = model || 'glm-5.3-flash';
   } else if (settings.provider === 'custom') {
     baseUrl = baseUrl || 'https://api.openai.com/v1';
     model = model || 'gemini/gemini-3.1-flash-lite';
