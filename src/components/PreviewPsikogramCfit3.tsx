@@ -473,7 +473,7 @@ export function PreviewPsikogramCfit3({ state }: PreviewPsikogramCfit3Props) {
             <thead>
               <tr>
                 <th style={{ border: '1px solid black', padding: '2px', fontWeight: 'bold', textAlign: 'center', width: '20%', backgroundColor: '#f3f4f6', verticalAlign: 'middle' }} rowSpan={2}>
-                  PSIKOGRAM<br />Taraf Kecerdasan (CFIT)
+                  PSIKOGRAM<br />Taraf Kecerdasan
                 </th>
                 <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%', backgroundColor: '#f3f4f6' }}>Sangat Rendah<br />&lt; 70</th>
                 <th style={{ border: '1px solid black', padding: '1.5px', width: '11.4%', backgroundColor: '#f3f4f6' }}>Rendah<br />70 - 79</th>
